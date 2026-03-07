@@ -1,4 +1,5 @@
 from app.api.skills import SKILLS
+from app.services.knowledge_service import KnowledgeService
 import sqlite3
 from datetime import datetime
 from typing import List
@@ -11,6 +12,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DB_PATH = "/tmp/chat_history.db"
+
+# 初始化知识库服务
+knowledge_service = KnowledgeService()
 
 
 def init_db():
@@ -77,6 +81,21 @@ class ChatService:
         """获取 AI 回复"""
         skill = SKILLS.get(skill_id or "general", SKILLS["general"])
         system_prompt = skill["prompt"]
+        
+        # 如果是知识库技能，先检索相关内容
+        if skill_id == "knowledge":
+            try:
+                docs = await knowledge_service.search(message, k=3)
+                if docs:
+                    context = "\n\n".join([f"[参考{i+1}] {doc}" for i, doc in enumerate(docs)])
+                    system_prompt = f"""你是一个基于企业知识库回答问题的AI助手。
+
+参考知识：
+{context}
+
+请根据以上知识回答用户的问题。如果知识库中没有相关信息，请如实说明并基于你的理解回答。"""
+            except Exception as e:
+                print(f"知识库检索失败: {e}")
         
         # 获取历史
         history = await self.get_history(session_id)

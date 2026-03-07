@@ -250,9 +250,48 @@
       padding: 8px 24px;
       background: #f8fafc;
       border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
     }
     .status-bar.connected { color: #22c55e; }
     .status-bar.error { color: #ef4444; }
+    
+    /* 清空对话按钮 */
+    .clear-btn {
+      background: none;
+      border: none;
+      color: #64748B;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .clear-btn:hover { color: #ef4444; }
+    
+    /* 打字动画 */
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 8px 0;
+    }
+    .typing-indicator span {
+      width: 8px;
+      height: 8px;
+      background: #FF6B35;
+      border-radius: 50%;
+      animation: typing 1.4s infinite;
+    }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-4px); }
+    }
+    
+    /* 消息时间 */
+    .message-time {
+      font-size: 10px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
@@ -301,7 +340,10 @@
       </div>
     </div>
     
-    <div class="status-bar" id="statusBar">检查连接中...</div>
+    <div class="status-bar" id="statusBar">
+      <span id="statusText">检查连接中...</span>
+      <button class="clear-btn" onclick="clearChat()">🗑️ 清空对话</button>
+    </div>
   </div>
 
   <script>
@@ -322,17 +364,17 @@
     
     // 检查连接
     async function checkConnection() {
-      const statusBar = document.getElementById('statusBar');
+      const statusText = document.getElementById('statusText');
       try {
         const res = await fetch(`${API_BASE}/api/skills`);
         if (res.ok) {
-          statusBar.textContent = '✓ 已连接到 AI 服务';
+          statusText.textContent = '✓ 已连接到 AI 服务';
           statusBar.className = 'status-bar connected';
         } else {
           throw new Error('API 返回错误');
         }
       } catch (e) {
-        statusBar.textContent = '✗ 无法连接后端服务，请确保 Linus 的服务已启动';
+        statusText.textContent = '✗ 无法连接后端服务';
         statusBar.className = 'status-bar error';
       }
     }
@@ -366,6 +408,20 @@
     async function switchSkill(skillId) {
       currentSkill = skillId;
       renderSkills();
+      // 显示技能切换提示
+      const skill = skills.find(s => s.id === skillId);
+      if (skill) {
+        addMessage('system', `已切换到「${skill.name}」技能`);
+      }
+    }
+    
+    // 清空对话
+    async function clearChat() {
+      if (!confirm('确定要清空当前对话吗？')) return;
+      localStorage.setItem('session_id', 'session_' + Date.now());
+      sessionId = localStorage.getItem('session_id');
+      document.getElementById('messages').innerHTML = '';
+      addMessage('assistant', '对话已清空！有什么我可以帮你的吗？✨');
     }
     
     // 加载历史记录
@@ -400,12 +456,25 @@
       
       // 禁用输入
       sendBtn.disabled = true;
+      sendBtn.innerHTML = '<span class="loading"></span>';
       input.value = '';
       
       // 显示用户消息
       addMessage('user', message);
       
-      // 滚动到底部
+      // 添加打字动画
+      const messages = document.getElementById('messages');
+      const typingId = 'typing-' + Date.now();
+      messages.insertAdjacentHTML('beforeend', `
+        <div class="message ai" id="${typingId}">
+          <div class="message-icon">🤖</div>
+          <div class="message-content">
+            <div class="typing-indicator">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+      `);
       scrollToBottom();
       
       try {
@@ -420,13 +489,19 @@
         });
         
         const data = await res.json();
+        
+        // 移除打字动画
+        document.getElementById(typingId)?.remove();
+        // 显示回复
         addMessage('assistant', data.reply);
       } catch (e) {
+        document.getElementById(typingId)?.remove();
         addMessage('assistant', '抱歉，出现了一些问题：' + e.message);
       }
       
       // 启用输入
       sendBtn.disabled = false;
+      sendBtn.textContent = '发送';
       input.focus();
       scrollToBottom();
     }
