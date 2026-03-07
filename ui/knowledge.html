@@ -44,6 +44,19 @@
     .nav-item:hover { background: rgba(255,255,255,0.1); }
     .nav-item.active { background: #FF6B35; }
     
+    /* 主题切换 */
+    .theme-toggle {
+      margin-top: auto;
+      padding: 12px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+    .theme-toggle:hover { background: rgba(255,255,255,0.1); }
+    
     /* 主内容区 */
     .main {
       flex: 1;
@@ -246,6 +259,20 @@
       font-size: 11px;
       color: #64748B;
     }
+    
+    /* 深色主题 */
+    body.dark { background: #1A1A2E; }
+    body.dark .sidebar { background: #0F0F1A; }
+    body.dark .header { background: #16162A; border-color: #2A2A4A; }
+    body.dark .header h1 { color: #fff; }
+    body.dark .content { background: #1A1A2E; }
+    body.dark .upload-section { background: #2A2A4A; border-color: #3A3A5A; }
+    body.dark .upload-text { color: #E5E7EB; }
+    body.dark .docs-section { background: #2A2A4A; }
+    body.dark .section-title { color: #E5E7EB; }
+    body.dark .doc-item { background: #3A3A5A; }
+    body.dark .doc-name { color: #E5E7EB; }
+    body.dark .status-bar { background: #16162A; border-color: #2A2A4A; }
   </style>
 </head>
 <body>
@@ -254,7 +281,11 @@
     <div class="logo">🐼 小优<span>AI</span></div>
     <div class="nav-item" onclick="location.href='chat.html'">💬 对话</div>
     <div class="nav-item active">📚 知识库</div>
-    <div class="nav-item" onclick="location.href='chat.html'">⚙️ 设置</div>
+    <div class="nav-item">⚙️ 设置</div>
+    <div class="theme-toggle" onclick="toggleTheme()">
+      <span id="themeIcon">🌙</span>
+      <span id="themeText">深色模式</span>
+    </div>
   </div>
   
   <!-- 主内容 -->
@@ -305,11 +336,32 @@
   </div>
 
   <script>
+    // 主题切换
+    function toggleTheme() {
+      const body = document.body;
+      body.classList.toggle('dark');
+      const isDark = body.classList.contains('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      document.getElementById('themeIcon').textContent = isDark ? '☀️' : '🌙';
+      document.getElementById('themeText').textContent = isDark ? '浅色模式' : '深色模式';
+    }
+    
+    // 加载主题
+    function loadTheme() {
+      const theme = localStorage.getItem('theme');
+      if (theme === 'dark') {
+        document.body.classList.add('dark');
+        document.getElementById('themeIcon').textContent = '☀️';
+        document.getElementById('themeText').textContent = '浅色模式';
+      }
+    }
+    
     const API_BASE = 'http://localhost:8017';
     let documents = [];
     
     // 初始化
     async function init() {
+      loadTheme();
       await loadDocuments();
     }
     
