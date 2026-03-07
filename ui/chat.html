@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小优 AI 助手</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F5F5F7;
+      height: 100vh;
+      display: flex;
+    }
+    
+    /* 侧边栏 */
+    .sidebar {
+      width: 260px;
+      background: #1A1A2E;
+      color: white;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    .logo {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo span { color: #FF6B35; }
+    .nav-item {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.1); }
+    .nav-item.active { background: #FF6B35; }
+    
+    /* 主内容区 */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* 顶部栏 */
+    .header {
+      background: white;
+      padding: 16px 32px;
+      border-bottom: 1px solid #E5E7EB;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 18px; color: #1A1A2E; }
+    .user-info { display: flex; align-items: center; gap: 12px; }
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FF6B35, #FF8F5E);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+    }
+    
+    /* 对话区 */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    .chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      overflow: hidden;
+    }
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+    .message {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .message.ai { align-items: flex-start; }
+    .message.user { flex-direction: row-reverse; }
+    .message-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 18px;
+    }
+    .message.ai .message-icon {
+      background: #1A1A2E;
+      color: #FF6B35;
+    }
+    .message.user .message-icon {
+      background: #FF6B35;
+      color: white;
+    }
+    .message-content {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .message.ai .message-content {
+      background: white;
+      border: 1px solid #E5E7EB;
+    }
+    .message.user .message-content {
+      background: #1A1A2E;
+      color: white;
+    }
+    .message-content code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 13px;
+    }
+    .message.user .message-content code {
+      background: #2a2a3e;
+    }
+    
+    /* 输入区 */
+    .input-area {
+      background: white;
+      padding: 16px 24px;
+      border-top: 1px solid #E5E7EB;
+    }
+    .input-wrapper {
+      display: flex;
+      gap: 12px;
+      background: #F5F5F7;
+      border-radius: 12px;
+      padding: 8px;
+    }
+    .input-wrapper input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 8px 12px;
+      font-size: 14px;
+      outline: none;
+    }
+    .send-btn {
+      background: #FF6B35;
+      color: white;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .send-btn:hover { background: #e55a2b; }
+    .send-btn:disabled { background: #ccc; cursor: not-allowed; }
+    
+    /* 技能卡片侧边 */
+    .skills-panel {
+      width: 280px;
+      background: white;
+      border-left: 1px solid #E5E7EB;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .skills-title {
+      font-size: 14px;
+      color: #64748B;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .skill-card {
+      background: #F8FAFC;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .skill-card:hover {
+      border-color: #FF6B35;
+      box-shadow: 0 4px 12px rgba(255,107,53,0.1);
+    }
+    .skill-card.active {
+      border-color: #FF6B35;
+      background: #FFF7F3;
+    }
+    .skill-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #1A1A2E;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      font-size: 20px;
+    }
+    .skill-name {
+      font-weight: 600;
+      color: #1A1A2E;
+      margin-bottom: 4px;
+    }
+    .skill-desc {
+      font-size: 12px;
+      color: #64748B;
+    }
+    
+    /* 加载动画 */
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ccc;
+      border-top-color: #FF6B35;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* 连接状态 */
+    .status-bar {
+      font-size: 12px;
+      color: #64748B;
+      padding: 8px 24px;
+      background: #f8fafc;
+      border-top: 1px solid #e5e7eb;
+    }
+    .status-bar.connected { color: #22c55e; }
+    .status-bar.error { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <!-- 侧边栏 -->
+  <div class="sidebar">
+    <div class="logo">🐼 小优<span>AI</span></div>
+    <div class="nav-item active">💬 对话</div>
+    <div class="nav-item">📚 知识库</div>
+    <div class="nav-item">⚙️ 设置</div>
+  </div>
+  
+  <!-- 主内容 -->
+  <div class="main">
+    <div class="header">
+      <h1>🤖 AI 对话助手</h1>
+      <div class="user-info">
+        <span>你好，设计师</span>
+        <div class="avatar">P</div>
+      </div>
+    </div>
+    
+    <div class="chat-container">
+      <div class="chat-main">
+        <div class="messages" id="messages">
+          <div class="message ai">
+            <div class="message-icon">🤖</div>
+            <div class="message-content">
+你好！我是小优 AI 助手～ 有什么我可以帮你的吗？✨
+
+你可以试试右侧的技能卡片，比如让我帮你写代码、分析数据、或者回答问题！</div>
+          </div>
+        </div>
+        
+        <div class="input-area">
+          <div class="input-wrapper">
+            <input type="text" id="messageInput" placeholder="输入消息..." />
+            <button class="send-btn" id="sendBtn">发送</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 技能卡片 -->
+      <div class="skills-panel">
+        <div class="skills-title">⚡ 可用技能</div>
+        <div id="skillsList"></div>
+      </div>
+    </div>
+    
+    <div class="status-bar" id="statusBar">检查连接中...</div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:8017';
+    let sessionId = localStorage.getItem('session_id') || 'session_' + Date.now();
+    let currentSkill = 'general';
+    let skills = [];
+    
+    // 保存 session_id
+    localStorage.setItem('session_id', sessionId);
+    
+    // 初始化
+    async function init() {
+      await checkConnection();
+      await loadSkills();
+      await loadHistory();
+    }
+    
+    // 检查连接
+    async function checkConnection() {
+      const statusBar = document.getElementById('statusBar');
+      try {
+        const res = await fetch(`${API_BASE}/api/skills`);
+        if (res.ok) {
+          statusBar.textContent = '✓ 已连接到 AI 服务';
+          statusBar.className = 'status-bar connected';
+        } else {
+          throw new Error('API 返回错误');
+        }
+      } catch (e) {
+        statusBar.textContent = '✗ 无法连接后端服务，请确保 Linus 的服务已启动';
+        statusBar.className = 'status-bar error';
+      }
+    }
+    
+    // 加载技能列表
+    async function loadSkills() {
+      try {
+        const res = await fetch(`${API_BASE}/api/skills`);
+        skills = await res.json();
+        renderSkills();
+      } catch (e) {
+        console.error('加载技能失败:', e);
+      }
+    }
+    
+    // 渲染技能卡片
+    function renderSkills() {
+      const container = document.getElementById('skillsList');
+      const icons = {'general': '💬', 'expert': '💻', 'knowledge': '📚'};
+      container.innerHTML = skills.map(skill => `
+        <div class="skill-card ${skill.id === currentSkill ? 'active' : ''}" 
+             data-id="${skill.id}" onclick="switchSkill('${skill.id}')">
+          <div class="skill-icon">${icons[skill.id] || '⚡'}</div>
+          <div class="skill-name">${skill.name}</div>
+          <div class="skill-desc">${skill.description}</div>
+        </div>
+      `).join('');
+    }
+    
+    // 切换技能
+    async function switchSkill(skillId) {
+      currentSkill = skillId;
+      renderSkills();
+    }
+    
+    // 加载历史记录
+    async function loadHistory() {
+      try {
+        const res = await fetch(`${API_BASE}/api/chat/history/${sessionId}`);
+        if (res.ok) {
+          const history = await res.json();
+          // 清空默认消息
+          document.getElementById('messages').innerHTML = '';
+          if (history.length === 0) {
+            // 如果没有历史，显示欢迎消息
+            addMessage('assistant', '你好！我是小优 AI 助手～ 有什么我可以帮你的吗？✨\n\n你可以试试右侧的技能卡片，比如让我帮你写代码、分析数据、或者回答问题！');
+          } else {
+            history.forEach(msg => {
+              addMessage(msg.role, msg.content);
+            });
+          }
+        }
+      } catch (e) {
+        console.error('加载历史失败:', e);
+      }
+    }
+    
+    // 发送消息
+    async function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const sendBtn = document.getElementById('sendBtn');
+      const message = input.value.trim();
+      
+      if (!message || sendBtn.disabled) return;
+      
+      // 禁用输入
+      sendBtn.disabled = true;
+      input.value = '';
+      
+      // 显示用户消息
+      addMessage('user', message);
+      
+      // 滚动到底部
+      scrollToBottom();
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/chat`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            session_id: sessionId,
+            message: message,
+            skill_id: currentSkill
+          })
+        });
+        
+        const data = await res.json();
+        addMessage('assistant', data.reply);
+      } catch (e) {
+        addMessage('assistant', '抱歉，出现了一些问题：' + e.message);
+      }
+      
+      // 启用输入
+      sendBtn.disabled = false;
+      input.focus();
+      scrollToBottom();
+    }
+    
+    // 添加消息到界面
+    function addMessage(role, content) {
+      const messages = document.getElementById('messages');
+      const icon = role === 'assistant' ? '🤖' : '👤';
+      const html = `
+        <div class="message ${role}">
+          <div class="message-icon">${icon}</div>
+          <div class="message-content">${escapeHtml(content)}</div>
+        </div>
+      `;
+      messages.insertAdjacentHTML('beforeend', html);
+      scrollToBottom();
+    }
+    
+    // 转义 HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // 滚动到底部
+    function scrollToBottom() {
+      const messages = document.getElementById('messages');
+      messages.scrollTop = messages.scrollHeight;
+    }
+    
+    // 事件监听
+    document.getElementById('sendBtn').addEventListener('click', sendMessage);
+    document.getElementById('messageInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+    
+    // 启动
+    init();
+  </script>
+</body>
+</html>
