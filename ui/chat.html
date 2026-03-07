@@ -292,11 +292,111 @@
       color: #94a3b8;
       margin-top: 4px;
     }
+    
+    /* ========== 移动端适配 ========== */
+    @media (max-width: 768px) {
+      /* 隐藏侧边栏 */
+      .sidebar {
+        position: fixed;
+        left: -260px;
+        top: 0;
+        bottom: 0;
+        z-index: 100;
+        transition: left 0.3s;
+      }
+      .sidebar.open {
+        left: 0;
+      }
+      
+      /* 移动端菜单按钮 */
+      .mobile-menu-btn {
+        display: flex !important;
+      }
+      
+      /* 技能面板 */
+      .skills-panel {
+        position: fixed;
+        right: -280px;
+        top: 0;
+        bottom: 0;
+        z-index: 100;
+        transition: right 0.3s;
+        width: 280px;
+      }
+      .skills-panel.open {
+        right: 0;
+      }
+      
+      /* 移动端头部 */
+      .header {
+        padding: 12px 16px;
+      }
+      .header h1 {
+        font-size: 16px;
+      }
+      
+      /* 聊天区域 */
+      .chat-main {
+        padding: 12px;
+      }
+      
+      /* 消息 */
+      .message-content {
+        max-width: 85%;
+      }
+      
+      /* 输入区域 */
+      .input-area {
+        padding: 12px;
+      }
+      
+      /* 遮罩层 */
+      .overlay {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 99;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+      }
+      .overlay.show {
+        opacity: 1;
+        pointer-events: auto;
+      }
+    }
+    
+    /* 移动端菜单按钮 */
+    .mobile-menu-btn {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      margin-right: 12px;
+    }
+    
+    /* 桌面端隐藏 */
+    .desktop-only {
+      display: inline;
+    }
+    @media (max-width: 768px) {
+      .desktop-only {
+        display: none;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- 遮罩层 -->
+  <div class="overlay" id="overlay" onclick="toggleMobileMenu()"></div>
+  
   <!-- 侧边栏 -->
-  <div class="sidebar">
+  <div class="sidebar" id="sidebar">
     <div class="logo">🐼 小优<span>AI</span></div>
     <div class="nav-item active">💬 对话</div>
     <div class="nav-item">📚 知识库</div>
@@ -306,9 +406,13 @@
   <!-- 主内容 -->
   <div class="main">
     <div class="header">
-      <h1>🤖 AI 对话助手</h1>
+      <div style="display: flex; align-items: center;">
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+        <h1>🤖 AI 对话助手</h1>
+      </div>
       <div class="user-info">
-        <span>你好，设计师</span>
+        <button class="mobile-menu-btn" style="display: inline-flex;" onclick="toggleSkillsPanel()">⚡</button>
+        <span class="desktop-only">你好，设计师</span>
         <div class="avatar">P</div>
       </div>
     </div>
@@ -334,7 +438,7 @@
       </div>
       
       <!-- 技能卡片 -->
-      <div class="skills-panel">
+      <div class="skills-panel" id="skillsPanel">
         <div class="skills-title">⚡ 可用技能</div>
         <div id="skillsList"></div>
       </div>
@@ -347,6 +451,32 @@
   </div>
 
   <script>
+    // 移动端菜单切换
+    function toggleMobileMenu() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('overlay').classList.toggle('show');
+    }
+    
+    // 移动端技能面板切换
+    function toggleSkillsPanel() {
+      document.getElementById('skillsPanel').classList.toggle('open');
+      document.getElementById('overlay').classList.toggle('show');
+    }
+    
+    // 移动端切换技能时关闭侧边栏
+    function switchSkill(skillId) {
+      currentSkill = skillId;
+      renderSkills();
+      const skill = skills.find(s => s.id === skillId);
+      if (skill) {
+        addMessage('system', `已切换到「${skill.name}」技能`);
+      }
+      // 移动端关闭侧边栏
+      if (window.innerWidth <= 768) {
+        toggleMobileMenu();
+      }
+    }
+    
     const API_BASE = 'http://localhost:8017';
     let sessionId = localStorage.getItem('session_id') || 'session_' + Date.now();
     let currentSkill = 'general';
@@ -402,17 +532,6 @@
           <div class="skill-desc">${skill.description}</div>
         </div>
       `).join('');
-    }
-    
-    // 切换技能
-    async function switchSkill(skillId) {
-      currentSkill = skillId;
-      renderSkills();
-      // 显示技能切换提示
-      const skill = skills.find(s => s.id === skillId);
-      if (skill) {
-        addMessage('system', `已切换到「${skill.name}」技能`);
-      }
     }
     
     // 清空对话
