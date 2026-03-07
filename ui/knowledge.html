@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小优 AI - 知识库管理</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F5F5F7;
+      height: 100vh;
+      display: flex;
+    }
+    
+    /* 侧边栏 */
+    .sidebar {
+      width: 260px;
+      background: #1A1A2E;
+      color: white;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    .logo {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo span { color: #FF6B35; }
+    .nav-item {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.1); }
+    .nav-item.active { background: #FF6B35; }
+    
+    /* 主内容区 */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    /* 顶部栏 */
+    .header {
+      background: white;
+      padding: 16px 32px;
+      border-bottom: 1px solid #E5E7EB;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 18px; color: #1A1A2E; }
+    .user-info { display: flex; align-items: center; gap: 12px; }
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FF6B35, #FF8F5E);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+    }
+    
+    /* 内容区 */
+    .content {
+      flex: 1;
+      padding: 24px 32px;
+      overflow-y: auto;
+    }
+    
+    /* 上传区域 */
+    .upload-section {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+      border: 2px dashed #E5E7EB;
+      transition: all 0.3s;
+    }
+    .upload-section:hover {
+      border-color: #FF6B35;
+      background: #FFF7F3;
+    }
+    .upload-area {
+      text-align: center;
+      cursor: pointer;
+    }
+    .upload-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    .upload-text {
+      font-size: 16px;
+      color: #1A1A2E;
+      margin-bottom: 8px;
+    }
+    .upload-hint {
+      font-size: 14px;
+      color: #64748B;
+    }
+    #fileInput { display: none; }
+    
+    /* 文档列表 */
+    .docs-section {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1A1A2E;
+    }
+    .doc-count {
+      background: #F0F0F0;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      color: #64748B;
+    }
+    
+    /* 文档卡片 */
+    .doc-list {
+      display: grid;
+      gap: 12px;
+    }
+    .doc-item {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      background: #F8FAFC;
+      border-radius: 12px;
+      transition: all 0.2s;
+    }
+    .doc-item:hover {
+      background: #F0F7FF;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .doc-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: #1A1A2E;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 16px;
+      font-size: 20px;
+    }
+    .doc-info {
+      flex: 1;
+    }
+    .doc-name {
+      font-weight: 500;
+      color: #1A1A2E;
+      margin-bottom: 4px;
+    }
+    .doc-meta {
+      font-size: 12px;
+      color: #64748B;
+    }
+    .doc-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-danger {
+      background: #FEE2E2;
+      color: #DC2626;
+    }
+    .btn-danger:hover { background: #FECACA; }
+    
+    /* 空状态 */
+    .empty-state {
+      text-align: center;
+      padding: 48px;
+      color: #64748B;
+    }
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    
+    /* 加载 */
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ccc;
+      border-top-color: #FF6B35;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* 状态栏 */
+    .status-bar {
+      font-size: 12px;
+      color: #64748B;
+      padding: 8px 32px;
+      background: #f8fafc;
+      border-top: 1px solid #e5e7eb;
+    }
+    .status-bar.success { color: #22c55e; }
+    .status-bar.error { color: #ef4444; }
+    
+    /* 支持的格式标签 */
+    .format-tags {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    .format-tag {
+      padding: 4px 8px;
+      background: #E5E7EB;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #64748B;
+    }
+  </style>
+</head>
+<body>
+  <!-- 侧边栏 -->
+  <div class="sidebar">
+    <div class="logo">🐼 小优<span>AI</span></div>
+    <div class="nav-item" onclick="location.href='chat.html'">💬 对话</div>
+    <div class="nav-item active">📚 知识库</div>
+    <div class="nav-item" onclick="location.href='chat.html'">⚙️ 设置</div>
+  </div>
+  
+  <!-- 主内容 -->
+  <div class="main">
+    <div class="header">
+      <h1>📚 知识库管理</h1>
+      <div class="user-info">
+        <span>你好，设计师</span>
+        <div class="avatar">P</div>
+      </div>
+    </div>
+    
+    <div class="content">
+      <!-- 上传区域 -->
+      <div class="upload-section">
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+          <div class="upload-icon">📤</div>
+          <div class="upload-text">点击上传文档，或拖拽文件到这里</div>
+          <div class="upload-hint">正在上传时会显示进度</div>
+          <div class="format-tags">
+            <span class="format-tag">PDF</span>
+            <span class="format-tag">Word</span>
+            <span class="format-tag">TXT</span>
+            <span class="format-tag">Markdown</span>
+          </div>
+        </div>
+        <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt,.md" multiple />
+      </div>
+      
+      <!-- 文档列表 -->
+      <div class="docs-section">
+        <div class="section-header">
+          <div class="section-title">📄 已上传文档</div>
+          <div class="doc-count" id="docCount">0 个文档</div>
+        </div>
+        
+        <div class="doc-list" id="docList">
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <div>还没有上传任何文档</div>
+            <div style="font-size: 14px; margin-top: 8px;">上传文档后，AI 就可以基于这些内容回答问题了</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="status-bar" id="statusBar">就绪</div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:8017';
+    let documents = [];
+    
+    // 初始化
+    async function init() {
+      await loadDocuments();
+    }
+    
+    // 加载文档列表
+    async function loadDocuments() {
+      try {
+        const res = await fetch(`${API_BASE}/api/knowledge/list`);
+        documents = await res.json();
+        renderDocuments();
+        updateCount();
+      } catch (e) {
+        showStatus('加载文档失败: ' + e.message, 'error');
+      }
+    }
+    
+    // 渲染文档列表
+    function renderDocuments() {
+      const container = document.getElementById('docList');
+      
+      if (documents.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <div>还没有上传任何文档</div>
+            <div style="font-size: 14px; margin-top: 8px;">上传文档后，AI 就可以基于这些内容回答问题了</div>
+          </div>
+        `;
+        return;
+      }
+      
+      const icons = {
+        'pdf': '📕',
+        'doc': '📘',
+        'docx': '📘',
+        'txt': '📝',
+        'md': '📑'
+      };
+      
+      container.innerHTML = documents.map(doc => `
+        <div class="doc-item">
+          <div class="doc-icon">${icons[doc.file_type] || '📄'}</div>
+          <div class="doc-info">
+            <div class="doc-name">${escapeHtml(doc.filename)}</div>
+            <div class="doc-meta">${formatDate(doc.uploaded_at)} · ${doc.chunk_count} 个片段</div>
+          </div>
+          <div class="doc-actions">
+            <button class="btn btn-danger" onclick="deleteDoc('${doc.id}')">删除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // 更新计数
+    function updateCount() {
+      document.getElementById('docCount').textContent = `${documents.length} 个文档`;
+    }
+    
+    // 上传文档
+    async function uploadFiles() {
+      const input = document.getElementById('fileInput');
+      const files = input.files;
+      
+      if (!files || files.length === 0) return;
+      
+      for (const file of files) {
+        await uploadFile(file);
+      }
+      
+      input.value = '';
+    }
+    
+    async function uploadFile(file) {
+      showStatus('上传中: ' + file.name + '...', '');
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/knowledge/add`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!res.ok) {
+          throw new Error('上传失败');
+        }
+        
+        const doc = await res.json();
+        documents.unshift(doc);
+        renderDocuments();
+        updateCount();
+        showStatus('上传成功: ' + file.name, 'success');
+      } catch (e) {
+        showStatus('上传失败: ' + e.message, 'error');
+      }
+    }
+    
+    // 删除文档
+    async function deleteDoc(docId) {
+      if (!confirm('确定要删除这个文档吗？')) return;
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/knowledge/${docId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!res.ok) {
+          throw new Error('删除失败');
+        }
+        
+        documents = documents.filter(d => d.id !== docId);
+        renderDocuments();
+        updateCount();
+        showStatus('删除成功', 'success');
+      } catch (e) {
+        showStatus('删除失败: ' + e.message, 'error');
+      }
+    }
+    
+    // 工具函数
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('zh-CN', { 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function showStatus(msg, type) {
+      const bar = document.getElementById('statusBar');
+      bar.textContent = msg;
+      bar.className = 'status-bar ' + type;
+    }
+    
+    // 事件监听
+    document.getElementById('fileInput').addEventListener('change', uploadFiles);
+    
+    // 拖拽上传
+    const uploadSection = document.querySelector('.upload-section');
+    
+    uploadSection.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadSection.style.borderColor = '#FF6B35';
+      uploadSection.style.background = '#FFF7F3';
+    });
+    
+    uploadSection.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      uploadSection.style.borderColor = '#E5E7EB';
+      uploadSection.style.background = 'white';
+    });
+    
+    uploadSection.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadSection.style.borderColor = '#E5E7EB';
+      uploadSection.style.background = 'white';
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        document.getElementById('fileInput').files = files;
+        uploadFiles();
+      }
+    });
+    
+    // 启动
+    init();
+  </script>
+</body>
+</html>
