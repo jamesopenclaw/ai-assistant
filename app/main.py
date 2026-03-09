@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import chat, knowledge, skills
+from app.api import chat, knowledge, skills, auth
+from app.utils.database import engine, Base
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="AI Assistant API", version="1.0.0")
 
@@ -14,6 +18,7 @@ app.add_middleware(
 )
 
 # Routes
+app.include_router(auth.router)
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
 app.include_router(skills.router, prefix="/api/skills", tags=["skills"])

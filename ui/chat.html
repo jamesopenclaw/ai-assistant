@@ -74,8 +74,22 @@
       align-items: center;
     }
     .header h1 { font-size: 18px; color: #1A1A2E; }
-    .user-info { display: flex; align-items: center; gap: 12px; }
-    .avatar {
+    .header .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+    }
+    .header .user-info .user-name {
+      font-size: 14px;
+      color: #374151;
+      font-weight: 500;
+    }
+    .header .user-info .user-email {
+      font-size: 12px;
+      color: #9CA3AF;
+    }
+    .header .user-info .avatar {
       width: 36px;
       height: 36px;
       border-radius: 50%;
@@ -85,6 +99,53 @@
       justify-content: center;
       color: white;
       font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .header .user-info .avatar:hover {
+      transform: scale(1.1);
+    }
+    
+    /* 用户下拉菜单 */
+    .user-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 8px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      min-width: 200px;
+      padding: 8px 0;
+      display: none;
+      z-index: 100;
+    }
+    .user-dropdown.show {
+      display: block;
+    }
+    .user-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #374151;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .user-dropdown-item:hover {
+      background: #F5F5F7;
+    }
+    .user-dropdown-item.logout {
+      color: #DC2626;
+      border-top: 1px solid #E5E7EB;
+      margin-top: 8px;
+      padding-top: 12px;
+    }
+    .user-dropdown-divider {
+      height: 1px;
+      background: #E5E7EB;
+      margin: 8px 0;
     }
     
     /* 对话区 */
@@ -508,10 +569,25 @@
         <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
         <h1>🤖 AI 对话助手</h1>
       </div>
-      <div class="user-info">
+      <div class="user-info" id="userInfo">
         <button class="mobile-menu-btn" style="display: inline-flex;" onclick="toggleSkillsPanel()">⚡</button>
-        <span class="desktop-only">你好，设计师</span>
-        <div class="avatar">P</div>
+        <div class="user-details desktop-only">
+          <div class="user-name" id="userName">访客</div>
+          <div class="user-email" id="userEmail"></div>
+        </div>
+        <div class="avatar" id="userAvatar" onclick="toggleUserMenu()">P</div>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="user-dropdown-item" onclick="showUserProfile()">
+            👤 个人资料
+          </div>
+          <div class="user-dropdown-item" onclick="showSettings()">
+            ⚙️ 设置
+          </div>
+          <div class="user-dropdown-divider"></div>
+          <div class="user-dropdown-item logout" onclick="logout()">
+            🚪 退出登录
+          </div>
+        </div>
       </div>
     </div>
     
@@ -603,8 +679,72 @@
     // 保存 session_id
     localStorage.setItem('session_id', sessionId);
     
+    // 用户认证相关
+    function updateUserUI() {
+      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      const username = localStorage.getItem('username') || '访客';
+      const email = localStorage.getItem('email') || '';
+      
+      const userNameEl = document.getElementById('userName');
+      const userEmailEl = document.getElementById('userEmail');
+      const userAvatarEl = document.getElementById('userAvatar');
+      
+      if (isLoggedIn) {
+        userNameEl.textContent = username;
+        userEmailEl.textContent = email;
+        userAvatarEl.textContent = username.charAt(0).toUpperCase();
+      } else {
+        userNameEl.textContent = '请登录';
+        userEmailEl.textContent = '登录以使用更多功能';
+        userAvatarEl.textContent = '?';
+      }
+    }
+    
+    function toggleUserMenu() {
+      const dropdown = document.getElementById('userDropdown');
+      dropdown.classList.toggle('show');
+    }
+    
+    // 点击其他地方关闭下拉菜单
+    document.addEventListener('click', function(e) {
+      const userInfo = document.getElementById('userInfo');
+      const dropdown = document.getElementById('userDropdown');
+      if (userInfo && !userInfo.contains(e.target)) {
+        dropdown.classList.remove('show');
+      }
+    });
+    
+    function showUserProfile() {
+      const username = localStorage.getItem('username') || '访客';
+      const email = localStorage.getItem('email') || '未设置';
+      alert(`个人资料\n\n用户名: ${username}\n邮箱: ${email}`);
+      toggleUserMenu();
+    }
+    
+    function showSettings() {
+      alert('设置功能开发中...');
+      toggleUserMenu();
+    }
+    
+    function logout() {
+      if (confirm('确定要退出登录吗？')) {
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('username');
+        localStorage.removeItem('email');
+        window.location.href = 'login.html';
+      }
+    }
+    
     // 初始化
     async function init() {
+      // 检查登录状态
+      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      if (!isLoggedIn) {
+        // 未登录，跳转到登录页面（可选）
+        console.log('用户未登录');
+      }
+      updateUserUI();
+      
       loadTheme();
       await checkConnection();
       await loadSkills();
