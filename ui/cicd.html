@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CI/CD 监控面板</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F5F5F7;
+      height: 100vh;
+      display: flex;
+    }
+    
+    /* 侧边栏 */
+    .sidebar {
+      width: 260px;
+      background: #1A1A2E;
+      color: white;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    .logo {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo span { color: #FF6B35; }
+    .nav-item {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.1); }
+    .nav-item.active { background: #FF6B35; }
+    .nav-icon { width: 20px; height: 20px; opacity: 0.8; }
+    
+    /* 主内容区 */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    /* 顶部栏 */
+    .header {
+      background: white;
+      padding: 16px 32px;
+      border-bottom: 1px solid #E5E7EB;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 18px; color: #1A1A2E; }
+    .header-actions { display: flex; gap: 12px; }
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #FF6B35;
+      color: white;
+    }
+    .btn-primary:hover { background: #E55A2B; }
+    .btn-secondary {
+      background: #F3F4F6;
+      color: #374151;
+    }
+    .btn-secondary:hover { background: #E5E7EB; }
+    
+    /* 内容区 */
+    .content {
+      flex: 1;
+      padding: 24px 32px;
+      overflow-y: auto;
+    }
+    
+    /* 统计卡片 */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .stat-card .label {
+      font-size: 14px;
+      color: #6B7280;
+      margin-bottom: 8px;
+    }
+    .stat-card .value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1A1A2E;
+    }
+    .stat-card .change {
+      font-size: 12px;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .stat-card .change.up { color: #10B981; }
+    .stat-card .change.down { color: #EF4444; }
+    .stat-card.success .value { color: #10B981; }
+    .stat-card.failed .value { color: #EF4444; }
+    .stat-card.running .value { color: #3B82F6; }
+    .stat-card.pending .value { color: #F59E0B; }
+    
+    /* 流水线列表 */
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1A1A2E;
+      margin-bottom: 16px;
+    }
+    
+    .pipeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .pipeline-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .pipeline-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    
+    .pipeline-status {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .pipeline-status.success { background: #D1FAE5; }
+    .pipeline-status.failed { background: #FEE2E2; }
+    .pipeline-status.running { background: #DBEAFE; }
+    .pipeline-status.pending { background: #FEF3C7; }
+    
+    .pipeline-status svg {
+      width: 24px;
+      height: 24px;
+    }
+    .pipeline-status.success svg { color: #10B981; }
+    .pipeline-status.failed svg { color: #EF4444; }
+    .pipeline-status.running svg { color: #3B82F6; }
+    .pipeline-status.pending svg { color: #F59E0B; }
+    
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .pipeline-status.running svg {
+      animation: spin 1.5s linear infinite;
+    }
+    
+    .pipeline-info {
+      flex: 1;
+    }
+    .pipeline-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1A1A2E;
+      margin-bottom: 4px;
+    }
+    .pipeline-meta {
+      font-size: 13px;
+      color: #6B7280;
+      display: flex;
+      gap: 16px;
+    }
+    .pipeline-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .pipeline-branches {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .branch-tag {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .branch-tag.main {
+      background: #DBEAFE;
+      color: #1D4ED8;
+    }
+    .branch-tag.feature {
+      background: #F3E8FF;
+      color: #7C3AED;
+    }
+    .branch-tag.dev {
+      background: #D1FAE5;
+      color: #059669;
+    }
+    
+    .pipeline-stats {
+      display: flex;
+      gap: 24px;
+      text-align: right;
+    }
+    .pipeline-stats .stat {
+      display: flex;
+      flex-direction: column;
+    }
+    .pipeline-stats .stat-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1A1A2E;
+    }
+    .pipeline-stats .stat-label {
+      font-size: 12px;
+      color: #6B7280;
+    }
+    
+    /* 构建历史 */
+    .history-section {
+      margin-top: 32px;
+    }
+    
+    .history-list {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    
+    .history-header {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      padding: 16px 20px;
+      background: #F9FAFB;
+      font-size: 13px;
+      font-weight: 600;
+      color: #6B7280;
+      border-bottom: 1px solid #E5E7EB;
+    }
+    
+    .history-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      padding: 16px 20px;
+      align-items: center;
+      border-bottom: 1px solid #F3F4F6;
+      transition: background 0.2s;
+    }
+    .history-row:hover {
+      background: #F9FAFB;
+    }
+    .history-row:last-child {
+      border-bottom: none;
+    }
+    
+    .history-commit {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .commit-hash {
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 13px;
+      color: #3B82F6;
+      background: #EFF6FF;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    .commit-message {
+      color: #374151;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .history-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .status-dot.success { background: #10B981; }
+    .status-dot.failed { background: #EF4444; }
+    .status-dot.running { background: #3B82F6; }
+    .status-dot.pending { background: #F59E0B; }
+    
+    .history-time {
+      color: #6B7280;
+      font-size: 13px;
+    }
+    
+    .history-duration {
+      color: #6B7280;
+      font-size: 13px;
+    }
+    
+    .history-author {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .author-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    
+    /* 进度条 */
+    .progress-bar {
+      height: 6px;
+      background: #E5E7EB;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+    .progress-fill.success { background: #10B981; }
+    .progress-fill.failed { background: #EF4444; }
+    .progress-fill.running { background: #3B82F6; }
+    
+    /* 空状态 */
+    .empty-state {
+      text-align: center;
+      padding: 48px;
+      color: #6B7280;
+    }
+    
+    /* 刷新按钮 */
+    .refresh-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: #F3F4F6;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #6B7280;
+      transition: all 0.2s;
+    }
+    .refresh-btn:hover {
+      background: #E5E7EB;
+      color: #374151;
+    }
+    .refresh-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .refresh-btn.loading svg {
+      animation: rotate 1s linear infinite;
+    }
+  </style>
+</head>
+<body>
+  <!-- 侧边栏 -->
+  <aside class="sidebar">
+    <div class="logo">
+      <span>◆</span> AI 助手
+    </div>
+    
+    <a href="chat.html" class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      对话
+    </a>
+    
+    <a href="knowledge.html" class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+      </svg>
+      知识库
+    </a>
+    
+    <div class="nav-item active">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+      CI/CD 监控
+    </div>
+  </aside>
+
+  <!-- 主内容 -->
+  <main class="main">
+    <header class="header">
+      <h1>CI/CD 监控面板</h1>
+      <div class="header-actions">
+        <button class="refresh-btn" onclick="refreshData()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          刷新
+        </button>
+        <button class="btn btn-primary">新建流水线</button>
+      </div>
+    </header>
+    
+    <div class="content">
+      <!-- 统计卡片 -->
+      <div class="stats-grid">
+        <div class="stat-card success">
+          <div class="label">运行成功</div>
+          <div class="value" id="stat-success">24</div>
+          <div class="change up">↑ 12% 较上周</div>
+        </div>
+        <div class="stat-card failed">
+          <div class="label">运行失败</div>
+          <div class="value" id="stat-failed">3</div>
+          <div class="change down">↓ 25% 较上周</div>
+        </div>
+        <div class="stat-card running">
+          <div class="label">正在运行</div>
+          <div class="value" id="stat-running">2</div>
+          <div class="change">实时更新</div>
+        </div>
+        <div class="stat-card pending">
+          <div class="label">排队等待</div>
+          <div class="value" id="stat-pending">5</div>
+          <div class="change">最近 24h</div>
+        </div>
+      </div>
+      
+      <!-- 流水线列表 -->
+      <div class="section-title">流水线</div>
+      <div class="pipeline-list" id="pipeline-list">
+        <!-- 动态渲染 -->
+      </div>
+      
+      <!-- 构建历史 -->
+      <div class="history-section">
+        <div class="section-title">最近构建</div>
+        <div class="history-list">
+          <div class="history-header">
+            <div>提交</div>
+            <div>状态</div>
+            <div>耗时</div>
+            <div>时间</div>
+            <div>触发者</div>
+          </div>
+          <div id="history-rows">
+            <!-- 动态渲染 -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // CI/CD 数据
+    const pipelines = [
+      {
+        id: 1,
+        name: 'ai-assistant-backend',
+        description: '后端服务构建',
+        status: 'success',
+        branch: 'main',
+        lastRun: '2 分钟前',
+        duration: '3m 24s',
+        successRate: 98,
+        runs: 127
+      },
+      {
+        id: 2,
+        name: 'ai-assistant-ui',
+        description: '前端界面构建',
+        status: 'running',
+        branch: 'feature/new-dashboard',
+        lastRun: '运行中',
+        duration: '1m 12s',
+        progress: 65,
+        runs: 89
+      },
+      {
+        id: 3,
+        name: 'ai-assistant-tests',
+        description: '测试套件',
+        status: 'pending',
+        branch: 'dev',
+        lastRun: '排队中',
+        runs: 64
+      },
+      {
+        id: 4,
+        name: 'ai-assistant-deploy',
+        description: '生产环境部署',
+        status: 'failed',
+        branch: 'main',
+        lastRun: '1 小时前',
+        duration: '2m 45s',
+        runs: 52
+      },
+      {
+        id: 5,
+        name: 'ai-assistant-security',
+        description: '安全扫描',
+        status: 'success',
+        branch: 'main',
+        lastRun: '3 小时前',
+        duration: '5m 30s',
+        runs: 31
+      }
+    ];
+
+    const buildHistory = [
+      {
+        id: 1,
+        hash: 'a1b2c3d',
+        message: 'feat: 添加新的聊天组件',
+        status: 'success',
+        duration: '3m 24s',
+        time: '2 分钟前',
+        author: 'linus'
+      },
+      {
+        id: 2,
+        hash: 'e4f5g6h',
+        message: 'fix: 修复知识库搜索问题',
+        status: 'success',
+        duration: '2m 58s',
+        time: '15 分钟前',
+        author: 'bob'
+      },
+      {
+        id: 3,
+        hash: 'i7j8k9l',
+        message: 'feat: 集成新的 AI 模型',
+        status: 'running',
+        duration: '1m 12s',
+        time: '运行中',
+        author: 'alice'
+      },
+      {
+        id: 4,
+        hash: 'm0n1o2p',
+        message: 'chore: 更新依赖版本',
+        status: 'failed',
+        duration: '45s',
+        time: '1 小时前',
+        author: 'linus'
+      },
+      {
+        id: 5,
+        hash: 'q3r4s5t',
+        message: 'docs: 更新 API 文档',
+        status: 'success',
+        duration: '1m 05s',
+        time: '2 小时前',
+        author: 'bob'
+      }
+    ];
+
+    // 渲染流水线
+    function renderPipelines() {
+      const container = document.getElementById('pipeline-list');
+      container.innerHTML = pipelines.map(p => `
+        <div class="pipeline-card" onclick="showPipelineDetail(${p.id})">
+          <div class="pipeline-status ${p.status}">
+            ${getStatusIcon(p.status)}
+          </div>
+          <div class="pipeline-info">
+            <div class="pipeline-name">${p.name}</div>
+            <div class="pipeline-meta">
+              <span>${p.description}</span>
+              <span>🕐 ${p.lastRun}</span>
+              <span>⏱️ ${p.duration || '-'}</span>
+            </div>
+            <div class="pipeline-branches">
+              <span class="branch-tag ${getBranchClass(p.branch)}">${p.branch}</span>
+            </div>
+            ${p.status === 'running' && p.progress ? `
+              <div class="progress-bar">
+                <div class="progress-fill running" style="width: ${p.progress}%"></div>
+              </div>
+            ` : ''}
+          </div>
+          <div class="pipeline-stats">
+            <div class="stat">
+              <div class="stat-value">${p.successRate || '-'}</div>
+              <div class="stat-label">成功率</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">${p.runs}</div>
+              <div class="stat-label">总运行</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 渲染构建历史
+    function renderHistory() {
+      const container = document.getElementById('history-rows');
+      container.innerHTML = buildHistory.map(h => `
+        <div class="history-row">
+          <div class="history-commit">
+            <span class="commit-hash">${h.hash}</span>
+            <span class="commit-message">${h.message}</span>
+          </div>
+          <div class="history-status">
+            <span class="status-dot ${h.status}"></span>
+            <span>${getStatusText(h.status)}</span>
+          </div>
+          <div class="history-duration">${h.duration}</div>
+          <div class="history-time">${h.time}</div>
+          <div class="history-author">
+            <span class="author-avatar">${h.author.charAt(0).toUpperCase()}</span>
+            <span>${h.author}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function getStatusIcon(status) {
+      const icons = {
+        success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
+        failed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>',
+        running: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
+        pending: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
+      };
+      return icons[status] || icons.pending;
+    }
+
+    function getBranchClass(branch) {
+      if (branch === 'main') return 'main';
+      if (branch.startsWith('feature')) return 'feature';
+      return 'dev';
+    }
+
+    function getStatusText(status) {
+      const texts = {
+        success: '成功',
+        failed: '失败',
+        running: '运行中',
+        pending: '等待中'
+      };
+      return texts[status] || '未知';
+    }
+
+    function showPipelineDetail(id) {
+      console.log('查看流水线详情:', id);
+    }
+
+    function refreshData() {
+      const btn = document.querySelector('.refresh-btn');
+      btn.classList.add('loading');
+      
+      setTimeout(() => {
+        btn.classList.remove('loading');
+      }, 1000);
+    }
+
+    // 初始化
+    renderPipelines();
+    renderHistory();
+  </script>
+</body>
+</html>
