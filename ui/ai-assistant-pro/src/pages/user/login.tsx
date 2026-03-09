@@ -11,15 +11,35 @@ export default function LoginPage() {
 
   const handleSubmit = async (values: any) => {
     try {
-      // 模拟登录请求
-      console.log('登录参数:', values);
-      
-      // 登录成功，跳转到首页
-      message.success('登录成功！');
-      navigate('/chat');
-      return true;
+      // 调用真实登录 API
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: values.username,
+          password: values.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        // 保存 token 到 localStorage
+        localStorage.setItem('token', data.token.access_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        message.success('登录成功！');
+        navigate('/chat');
+        return true;
+      } else {
+        message.error(data.detail || '登录失败，请检查用户名和密码');
+        return false;
+      }
     } catch (error) {
-      message.error('登录失败，请重试！');
+      console.error('登录错误:', error);
+      message.error('登录失败，请检查网络连接');
       return false;
     }
   };
