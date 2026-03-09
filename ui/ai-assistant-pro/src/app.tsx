@@ -1,8 +1,4 @@
-import { RuntimeConfig } from '@umijs/max';
+import { RequestConfig } from '@umijs/max';
 import { requestConfig } from './request';
 
-export const request: RuntimeConfig = {
-  ...requestConfig,
-};
-
-export { requestConfig };
+export const request: RequestConfig = requestConfig;
