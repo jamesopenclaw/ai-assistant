@@ -5,20 +5,48 @@ import { useNavigate, Link } from '@umijs/max';
 import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
 import styles from './index.less';
 
+interface RegisterValues {
+  username: string;
+  email: string;
+  phone: string;
+  role: string;
+  password: string;
+  confirmPassword: string;
+}
+
 export default function RegisterPage() {
   const navigate = useNavigate();
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: RegisterValues) => {
     try {
-      // 模拟注册请求
-      console.log('注册参数:', values);
-      
-      // 注册成功，跳转到登录页
-      message.success('注册成功！请登录');
-      navigate('/user/login');
-      return true;
+      // 调用真实注册 API
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: values.username,
+          email: values.email,
+          phone: values.phone,
+          role: values.role,
+          password: values.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        message.success('注册成功！请登录');
+        navigate('/user/login');
+        return true;
+      } else {
+        message.error(data.detail || '注册失败，请重试');
+        return false;
+      }
     } catch (error) {
-      message.error('注册失败，请重试！');
+      console.error('注册错误:', error);
+      message.error('注册失败，请检查网络连接');
       return false;
     }
   };
@@ -127,15 +155,19 @@ export default function RegisterPage() {
                 size: 'large',
                 prefix: <LockOutlined />,
               }}
-              placeholder="请输入密码"
+              placeholder="请输入密码（至少8位，包含大小写字母和数字）"
               rules={[
                 {
                   required: true,
                   message: '请输入密码！',
                 },
                 {
-                  min: 6,
-                  message: '密码至少6个字符',
+                  min: 8,
+                  message: '密码至少8个字符',
+                },
+                {
+                  pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
+                  message: '密码必须包含大小写字母和数字',
                 },
               ]}
             />

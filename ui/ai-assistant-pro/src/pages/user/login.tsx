@@ -5,11 +5,18 @@ import { useNavigate, Link } from '@umijs/max';
 import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
 import styles from './index.less';
 
+interface LoginValues {
+  username?: string;
+  password?: string;
+  phone?: string;
+  code?: string;
+}
+
 export default function LoginPage() {
   const [loginType, setLoginType] = useState('account');
   const navigate = useNavigate();
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: LoginValues) => {
     try {
       // 调用真实登录 API
       const response = await fetch('/api/auth/login', {
@@ -23,7 +30,13 @@ export default function LoginPage() {
         }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        message.error('服务器响应格式错误，请稍后重试');
+        return false;
+      }
 
       if (response.ok && data.token) {
         // 保存 token 到 localStorage

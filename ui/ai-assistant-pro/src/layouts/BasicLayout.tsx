@@ -1,6 +1,5 @@
 import { ProLayout } from '@ant-design/pro-components';
 import { Link } from '@umijs/max';
-import { Result } from 'antd';
 import React from 'react';
 import { accessIconMap } from '../access/access';
 

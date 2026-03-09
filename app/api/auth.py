@@ -1,18 +1,23 @@
 """
-认证 API 路由 - 基于数据库和 JWT
+认证 API 路由 - 基于数据库和 JWT + HttpOnly Cookie
 """
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from app.utils.database import get_db
+from app.utils.database import get_db, settings
 from app.utils.auth import get_password_hash, create_access_token, authenticate_user
 from app.models.user import User
 from app.models.auth import UserCreate, UserResponse, LoginRequest, TokenResponse
 from app.utils.auth_middleware import get_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+# Cookie 配置
+COOKIE_NAME = "access_token"
+COOKIE_MAX_AGE = 60 * 60 * 24  # 24 小时（秒）
 
 
 # ============== API Endpoints ==============
@@ -57,12 +62,18 @@ def register(request: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-def login(request: LoginRequest, db: Session = Depends(get_db)):
+def login(
+    request: LoginRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+):
     """
     用户登录
     
     - **username**: 用户名（必填）
     - **password**: 密码（必填）
+    
+    登录成功后会在 Cookie 中设置 HttpOnly Token
     """
     user = authenticate_user(db, request.username, request.password)
 
@@ -73,6 +84,18 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
         )
 
     access_token = create_access_token(data={"sub": user.username})
+
+    # 设置 HttpOnly Cookie
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=access_token,
+        httponly=True,
+        secure=True,  # 生产环境建议启用
+        samesite="lax",
+        max_age=COOKIE_MAX_AGE,
+        # 本地开发可注释掉 domain
+        # domain="your-domain.com"
+    )
 
     return {
         "user": {
@@ -89,13 +112,16 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/logout")
-def logout(authorization: Optional[str] = Header(None)):
+def logout(response: Response):
     """
-    用户登出（JWT 无状态，只需客户端删除 token）
-    
-    - **authorization**: Bearer token
+    用户登出（清除 HttpOnly Cookie）
     """
-    return {"message": "登出成功，请客户端删除 token"}
+    response.delete_cookie(
+        key=COOKIE_NAME,
+        # domain 需要与设置 cookie 时一致
+        # domain="your-domain.com"
+    )
+    return {"message": "登出成功"}
 
 
 @router.get("/verify")
