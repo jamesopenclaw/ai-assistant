@@ -22,6 +22,11 @@ export default function BasicLayout(props: { children: React.ReactNode }) {
       icon: 'MessageOutlined',
     },
     {
+      path: '/templates',
+      name: '对话模板',
+      icon: 'AppstoreOutlined',
+    },
+    {
       path: '/cicd',
       name: 'CI/CD 流水线',
       icon: 'RocketOutlined',

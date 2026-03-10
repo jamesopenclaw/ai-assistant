@@ -6,6 +6,7 @@ export const accessIconMap: Record<string, React.ReactNode> = {
   MessageOutlined: <Icons.MessageOutlined />,
   RocketOutlined: <Icons.RocketOutlined />,
   BookOutlined: <Icons.BookOutlined />,
+  AppstoreOutlined: <Icons.AppstoreOutlined />,
   UserOutlined: <Icons.UserOutlined />,
   SettingOutlined: <Icons.SettingOutlined />,
   DashboardOutlined: <Icons.DashboardOutlined />,
