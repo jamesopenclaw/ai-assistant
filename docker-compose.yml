@@ -1,6 +1,23 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai-assistant-postgres
+    environment:
+      POSTGRES_DB: ai_assistant
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d ai_assistant"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build: .
     container_name: ai-assistant-api
@@ -8,20 +25,21 @@ services:
       - "8000:8000"
     environment:
       - MINIMAX_API_KEY=${MINIMAX_API_KEY}
+      - DATABASE_URL=postgresql://app_user:${DB_PASSWORD:-change_me_in_production}@postgres:5432/ai_assistant
       - PYTHONUNBUFFERED=1
     volumes:
       - chroma_data:/tmp/chroma_db
       - chat_data:/tmp
-    # 自动重启
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
-    # 健康检查
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
-    # 日志
     logging:
       driver: "json-file"
       options:
@@ -31,3 +49,4 @@ services:
 volumes:
   chroma_data:
   chat_data:
+  postgres_data:

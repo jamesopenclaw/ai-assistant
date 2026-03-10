@@ -3,6 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from pydantic_settings import BaseSettings
 from typing import Optional
+import os
 
 
 class Settings(BaseSettings):
@@ -17,9 +18,23 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-engine = create_engine(
-    settings.database_url, connect_args={"check_same_thread": False}
-)
+# Build engine with appropriate settings based on database type
+def get_engine():
+    url = settings.database_url
+    if url.startswith("postgresql"):
+        # PostgreSQL: use connection pool and pre-ping
+        return create_engine(
+            url,
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=10,
+        )
+    else:
+        # SQLite: keep original settings for backward compatibility
+        return create_engine(url, connect_args={"check_same_thread": False})
+
+
+engine = get_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
