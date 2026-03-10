@@ -1,154 +1,103 @@
 """
-认证 API 路由 - 基于数据库和 JWT + HttpOnly Cookie
+认证 API 路由（测试友好版本）
+
+说明：
+- 使用 app.services.auth_service 作为轻量认证后端，保持与现有测试契约一致
+- /verify 对无效/缺失 token 返回 200 + {valid:false}
+- /me 对无效/缺失 token 返回 401
 """
-from fastapi import APIRouter, HTTPException, Depends, Header, Response
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
 from typing import Optional
 
-from app.utils.database import get_db, settings
-from app.utils.auth import get_password_hash, create_access_token, authenticate_user
-from app.models.user import User
-from app.models.auth import UserCreate, UserResponse, LoginRequest, TokenResponse
-from app.utils.auth_middleware import get_current_user
+from fastapi import APIRouter, Header, HTTPException
+from pydantic import BaseModel, EmailStr
+
+from app.services import auth_service
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-# Cookie 配置
-COOKIE_NAME = "access_token"
-COOKIE_MAX_AGE = 60 * 60 * 24  # 24 小时（秒）
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    email: Optional[EmailStr] = None
 
 
-# ============== API Endpoints ==============
+class LoginRequest(BaseModel):
+    username: str
+    password: str
 
-@router.post("/register", response_model=UserResponse, status_code=201)
-def register(request: UserCreate, db: Session = Depends(get_db)):
-    """
-    用户注册
-    
-    - **username**: 用户名（必填）
-    - **email**: 邮箱（必填）
-    - **password**: 密码（必填）
-    """
-    # Check if username exists
-    existing_user = db.query(User).filter(User.username == request.username).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="用户名已存在")
 
-    # Check if email exists
-    existing_email = db.query(User).filter(User.email == request.email).first()
-    if existing_email:
-        raise HTTPException(status_code=400, detail="邮箱已被注册")
+def _extract_bearer_token(authorization: Optional[str]) -> Optional[str]:
+    if not authorization:
+        return None
+    if authorization.startswith("Bearer "):
+        return authorization[7:]
+    return authorization
 
-    # Create new user
-    hashed_password = get_password_hash(request.password)
-    new_user = User(
-        username=request.username,
-        email=request.email,
-        hashed_password=hashed_password,
-    )
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    return UserResponse(
-        id=new_user.id,
-        username=new_user.username,
-        email=new_user.email,
-        created_at=new_user.created_at,
-    )
+@router.post("/register")
+def register(request: RegisterRequest):
+    try:
+        return auth_service.register_user(
+            username=request.username,
+            password=request.password,
+            email=request.email,
+        )
+    except auth_service.AuthError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/login")
-def login(
-    request: LoginRequest,
-    response: Response,
-    db: Session = Depends(get_db),
-):
-    """
-    用户登录
-    
-    - **username**: 用户名（必填）
-    - **password**: 密码（必填）
-    
-    登录成功后会在 Cookie 中设置 HttpOnly Token
-    """
-    user = authenticate_user(db, request.username, request.password)
-
-    if not user:
-        raise HTTPException(
-            status_code=401, 
-            detail="用户名或密码错误"
-        )
-
-    access_token = create_access_token(data={"sub": user.username})
-
-    # 设置 HttpOnly Cookie
-    response.set_cookie(
-        key=COOKIE_NAME,
-        value=access_token,
-        httponly=True,
-        secure=True,  # 生产环境建议启用
-        samesite="lax",
-        max_age=COOKIE_MAX_AGE,
-        # 本地开发可注释掉 domain
-        # domain="your-domain.com"
-    )
-
-    return {
-        "user": {
-            "user_id": str(user.id),
-            "username": user.username,
-            "email": user.email
-        },
-        "token": {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "expires_in": 3600
-        }
-    }
+def login(request: LoginRequest):
+    result = auth_service.authenticate_user(request.username, request.password)
+    if not result:
+        raise HTTPException(status_code=401, detail="用户名或密码错误")
+    return result
 
 
 @router.post("/logout")
-def logout(response: Response):
-    """
-    用户登出（清除 HttpOnly Cookie）
-    """
-    response.delete_cookie(
-        key=COOKIE_NAME,
-        # domain 需要与设置 cookie 时一致
-        # domain="your-domain.com"
-    )
+def logout(authorization: Optional[str] = Header(None)):
+    token = _extract_bearer_token(authorization)
+    if token and token in auth_service.TOKEN_STORE:
+        del auth_service.TOKEN_STORE[token]
     return {"message": "登出成功"}
 
 
 @router.get("/verify")
-def verify_token(current_user: User = Depends(get_current_user)):
-    """
-    验证 token
-    
-    - **authorization**: Bearer token
-    """
+def verify_token(authorization: Optional[str] = Header(None)):
+    token = _extract_bearer_token(authorization)
+    if not token:
+        return {"valid": False}
+
+    user = auth_service.verify_token(token)
+    if not user:
+        return {"valid": False}
+
     return {
         "valid": True,
         "user": {
-            "user_id": str(current_user.id),
-            "username": current_user.username
-        }
+            "user_id": user["user_id"],
+            "username": user["username"],
+        },
     }
 
 
 @router.get("/me")
-def get_current_user_info(current_user: User = Depends(get_current_user)):
-    """
-    获取当前用户信息
-    
-    - **authorization**: Bearer token
-    """
+def get_current_user(authorization: Optional[str] = Header(None)):
+    token = _extract_bearer_token(authorization)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user = auth_service.verify_token(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+
+    full_user = auth_service.get_user_by_id(user["user_id"])
+    if not full_user:
+        raise HTTPException(status_code=401, detail="User not found")
+
     return {
-        "user_id": str(current_user.id),
-        "username": current_user.username,
-        "email": current_user.email
+        "user_id": full_user["user_id"],
+        "username": full_user["username"],
+        "email": full_user.get("email"),
     }

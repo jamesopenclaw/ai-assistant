@@ -38,18 +38,18 @@ export default function LoginPage() {
         return false;
       }
 
-      if (response.ok && data.token) {
+      if (response.ok && data?.token?.access_token) {
         // 保存 token 到 localStorage
         localStorage.setItem('token', data.token.access_token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
+        localStorage.setItem('user', JSON.stringify(data.user || {}));
+
         message.success('登录成功！');
         navigate('/chat');
         return true;
-      } else {
-        message.error(data.detail || '登录失败，请检查用户名和密码');
-        return false;
       }
+
+      message.error(data?.detail || '登录失败，请检查用户名和密码');
+      return false;
     } catch (error) {
       console.error('登录错误:', error);
       message.error('登录失败，请检查网络连接');
@@ -99,7 +99,8 @@ export default function LoginPage() {
                 },
                 {
                   key: 'phone',
-                  label: '手机号登录',
+                  label: '手机号登录（开发中）',
+                  disabled: true,
                 },
               ]}
             />

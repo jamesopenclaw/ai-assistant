@@ -1,15 +1,13 @@
-import { ProForm, ProFormText, ProFormSelect } from '@ant-design/pro-components';
+import { ProForm, ProFormText } from '@ant-design/pro-components';
 import { message } from 'antd';
 import React from 'react';
 import { useNavigate, Link } from '@umijs/max';
-import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import styles from './index.less';
 
 interface RegisterValues {
   username: string;
   email: string;
-  phone: string;
-  role: string;
   password: string;
   confirmPassword: string;
 }
@@ -19,7 +17,6 @@ export default function RegisterPage() {
 
   const handleSubmit = async (values: RegisterValues) => {
     try {
-      // 调用真实注册 API
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -28,22 +25,20 @@ export default function RegisterPage() {
         body: JSON.stringify({
           username: values.username,
           email: values.email,
-          phone: values.phone,
-          role: values.role,
           password: values.password,
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
         message.success('注册成功！请登录');
         navigate('/user/login');
         return true;
-      } else {
-        message.error(data.detail || '注册失败，请重试');
-        return false;
       }
+
+      message.error(data.detail || '注册失败，请重试');
+      return false;
     } catch (error) {
       console.error('注册错误:', error);
       message.error('注册失败，请检查网络连接');
@@ -61,9 +56,7 @@ export default function RegisterPage() {
               <span className={styles.title}>小优 AI 助手</span>
             </Link>
           </div>
-          <div className={styles.desc}>
-            智能助手，让工作更高效
-          </div>
+          <div className={styles.desc}>智能助手，让工作更高效</div>
         </div>
 
         <div className={styles.main}>
@@ -119,36 +112,6 @@ export default function RegisterPage() {
               ]}
             />
 
-            <ProFormText
-              name="phone"
-              fieldProps={{
-                size: 'large',
-                prefix: <PhoneOutlined />,
-              }}
-              placeholder="请输入手机号"
-              rules={[
-                {
-                  required: true,
-                  message: '请输入手机号!',
-                },
-                {
-                  pattern: /^1\d{10}$/,
-                  message: '手机号格式错误!',
-                },
-              ]}
-            />
-
-            <ProFormSelect
-              name="role"
-              label="用户类型"
-              placeholder="请选择用户类型"
-              rules={[{ required: true, message: '请选择用户类型' }]}
-              options={[
-                { label: '普通用户', value: 'user' },
-                { label: '管理员', value: 'admin' },
-              ]}
-            />
-
             <ProFormText.Password
               name="password"
               fieldProps={{
@@ -196,9 +159,7 @@ export default function RegisterPage() {
             />
 
             <div style={{ marginTop: 16, textAlign: 'center' }}>
-              <Link to="/user/login">
-                已有账号？立即登录
-              </Link>
+              <Link to="/user/login">已有账号？立即登录</Link>
             </div>
           </ProForm>
         </div>

@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status, Cookie
+from fastapi import Depends, HTTPException, status, Cookie, Header
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.utils.database import get_db
@@ -35,7 +35,7 @@ def extract_token(
 
 
 def get_current_user(
-    authorization: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
     access_token: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
 ) -> User:

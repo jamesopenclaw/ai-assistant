@@ -9,20 +9,20 @@ export const requestConfig: RequestConfig = {
   },
   requestInterceptors: [
     (config: any) => {
-      // 拦截请求配置
       const token = localStorage.getItem('token');
       if (token) {
-        config.headers['Authorization'] = `Bearer ${token}`;
+        config.headers = {
+          ...(config.headers || {}),
+          Authorization: `Bearer ${token}`,
+        };
       }
       return config;
     },
   ],
   responseInterceptors: [
-    (response: any) => {
-      // 拦截响应
-      const { data } = response;
-      if (data.code !== 200) {
-        console.error('Response error:', data.message);
+    async (response: any) => {
+      if (response.status === 401) {
+        localStorage.removeItem('token');
       }
       return response;
     },
