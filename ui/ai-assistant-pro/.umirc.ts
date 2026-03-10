@@ -55,7 +55,7 @@ export default defineConfig({
   npmClient: 'npm',
   proxy: {
     '/api': {
-      target: 'http://localhost:8000',
+      target: 'http://localhost:8013',
       changeOrigin: true,
     },
   },
