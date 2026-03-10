@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import chat, knowledge, skills, auth
+from app.api import chat, knowledge, skills, auth, templates
 from app.utils.database import engine, Base
 
 # Create database tables
@@ -22,6 +22,7 @@ app.include_router(auth.router)
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
 app.include_router(skills.router, prefix="/api/skills", tags=["skills"])
+app.include_router(templates.router, prefix="/api/templates", tags=["templates"])
 
 
 @app.get("/")

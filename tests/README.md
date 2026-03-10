@@ -59,6 +59,9 @@ pytest -s
 - ✅ 技能模块: 列表、详情、切换、字段验证
 - ✅ 数据模型: Message, ChatRequest, ChatResponse, Skill, Document, KnowledgeAddRequest
 - ✅ 聊天服务: 消息保存、历史获取、时间戳、多会话隔离
+- ✅ Function Calling: 成功调用、工具不存在、工具异常降级与日志记录
+- ✅ Web Search: 结构化返回、参数边界（count clamp）、降级与错误态（缺 key/空 query/上游非 200）
+- ✅ 模板服务: 列表、详情、404 错误态
 
 ### 集成测试
 - ✅ 根端点 `/` 和健康检查 `/health`
@@ -66,4 +69,28 @@ pytest -s
 - ✅ 技能 API: 列表、详情、切换、404
 - ✅ 知识库 API: 端点存在性检查
 - ✅ 聊天历史 API: 获取空会话、格式验证
+- ✅ 模板 API: 列表、详情、404
+- ✅ Function Calling API: 列工具、工具不存在降级
 - ✅ 错误处理: 无效 JSON、405、404
+
+## Smoke Checklist（第二轮）
+
+> 目标：覆盖 Function Calling / Web Search / 模板 三块核心路径 + 关键错误态。
+
+### A. Function Calling
+- [ ] `GET /api/chat/tools` 返回已注册工具（至少包含 `web_search`）
+- [ ] `POST /api/chat/tools/call` 调用不存在工具时：`200` + `ok=false` + 错误信息包含 `not found`
+- [ ] `FunctionCaller.call()` 工具成功时：`ok=true` 且写入 `tool_call_logs(status=success)`
+- [ ] `FunctionCaller.call()` 工具抛异常时：降级为 `ok=false` 且写入 `tool_call_logs(status=error)`
+
+### B. Web Search
+- [ ] 正常返回：输出 `query/total/top_result/results` 结构完整
+- [ ] `count` 边界：<1 被提升到 1，>10 被截断到 10
+- [ ] 空查询：抛 `ValueError(query is required)`
+- [ ] 缺少 `BRAVE_API_KEY`：抛 `RuntimeError(BRAVE_API_KEY is not configured)`
+- [ ] 上游非 200：抛 `RuntimeError(web_search failed: <status>)`
+
+### C. 模板
+- [ ] `GET /api/templates` 返回列表，元素包含 `id/name/content`
+- [ ] `GET /api/templates/{id}` 正常返回对应模板
+- [ ] `GET /api/templates/{bad_id}` 返回 `404` + `Template not found`

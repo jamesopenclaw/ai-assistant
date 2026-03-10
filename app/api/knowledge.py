@@ -12,6 +12,24 @@ knowledge_service = KnowledgeService()
 DOCUMENTS = {}
 
 
+@router.get("")
+async def knowledge_root():
+    """知识库根端点（用于健康与能力探测）"""
+    return {"status": "ok", "documents": len(DOCUMENTS)}
+
+
+@router.post("/search")
+async def search_knowledge(payload: dict):
+    """知识库搜索（兼容测试契约）"""
+    query = (payload or {}).get("query", "")
+    k = int((payload or {}).get("k", 3) or 3)
+    try:
+        results = await knowledge_service.search(query, k=k)
+        return {"query": query, "k": k, "results": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/add")
 async def add_document(file: UploadFile = File(...)):
     """上传文档到知识库"""

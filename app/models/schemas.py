@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 
@@ -10,8 +10,8 @@ class Message(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    session_id: str
-    message: str
+    session_id: str = Field(min_length=1)
+    message: str = Field(min_length=1)
     skill_id: Optional[str] = None
 
 
@@ -39,3 +39,21 @@ class Document(BaseModel):
 
 class KnowledgeAddRequest(BaseModel):
     file_path: str
+
+
+class ToolCallRequest(BaseModel):
+    tool_name: str = Field(min_length=1)
+    args: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ToolCallResponse(BaseModel):
+    ok: bool
+    tool: str
+    result: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+
+class Template(BaseModel):
+    id: str
+    name: str
+    content: str

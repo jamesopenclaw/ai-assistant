@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DB_PATH = "/tmp/chat_history.db"
+DB_PATH = os.getenv("CHAT_DB_PATH", "/tmp/chat_history.db")
 
 # 初始化知识库服务
 knowledge_service = KnowledgeService()

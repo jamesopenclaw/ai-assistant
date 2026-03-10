@@ -175,6 +175,46 @@ class TestChatHistoryAPI:
                 assert "content" in msg
 
 
+class TestTemplatesAPI:
+    """对话模板 API 测试"""
+
+    def test_list_templates(self):
+        response = client.get("/api/templates")
+        assert response.status_code == 200
+        items = response.json()
+        assert isinstance(items, list)
+        assert len(items) >= 10
+        assert {"id", "name", "content"}.issubset(items[0].keys())
+
+    def test_get_template(self):
+        response = client.get("/api/templates/general-qa")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == "general-qa"
+
+    def test_get_template_not_found(self):
+        response = client.get("/api/templates/not-exists")
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Template not found"
+
+
+class TestFunctionCallingAPI:
+    """Function Calling API 测试"""
+
+    def test_list_tools(self):
+        response = client.get("/api/chat/tools")
+        assert response.status_code == 200
+        tools = response.json()
+        assert any(t["name"] == "web_search" for t in tools)
+
+    def test_call_tool_not_found(self):
+        response = client.post("/api/chat/tools/call", json={"tool_name": "x", "args": {}})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ok"] is False
+        assert "not found" in data["error"].lower()
+
+
 class TestCORS:
     """CORS 测试"""
 

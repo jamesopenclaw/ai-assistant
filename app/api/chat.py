@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
-from app.models.schemas import ChatRequest, ChatResponse, Message
+from app.models.schemas import ChatRequest, ChatResponse, Message, ToolCallRequest, ToolCallResponse
 from app.services.chat_service import ChatService
+from app.services.tools_runtime import function_caller, registry
 from datetime import datetime
 
 router = APIRouter()
@@ -35,3 +36,16 @@ async def get_history(session_id: str):
         return history
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/tools")
+async def list_tools():
+    """列出已注册工具"""
+    return registry.list_tools()
+
+
+@router.post("/tools/call", response_model=ToolCallResponse)
+async def call_tool(request: ToolCallRequest):
+    """统一工具调用入口"""
+    result = await function_caller.call(request.tool_name, request.args)
+    return ToolCallResponse(**result)

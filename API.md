@@ -4,14 +4,29 @@ Base URL: `http://127.0.0.1:8013`
 
 ---
 
+## 0. 配置
+在启动服务前配置 `.env`：
+
+```env
+MINIMAX_API_KEY=your-minimax-key
+BRAVE_API_KEY=your-brave-key
+TOOL_MAX_RETRIES=1
+WEB_SEARCH_TIMEOUT_SECONDS=8
+WEB_SEARCH_CACHE_TTL_SECONDS=600
+```
+
+说明：
+- `BRAVE_API_KEY` 用于 `web_search` tool
+- `WEB_SEARCH_CACHE_TTL_SECONDS` 限制在 `300-900` 秒（5-15 分钟）
+
+---
+
 ## 1. 聊天接口
 
-### 发送消息
-```
-POST /api/chat
-```
+### POST /api/chat
+发送消息。
 
-**Request:**
+Request:
 ```json
 {
   "session_id": "会话ID",
@@ -20,7 +35,7 @@ POST /api/chat
 }
 ```
 
-**Response:**
+Response:
 ```json
 {
   "session_id": "会话ID",
@@ -29,61 +44,94 @@ POST /api/chat
 }
 ```
 
-### 获取历史
-```
-GET /api/chat/history/{session_id}
-```
-
-**Response:**
-```json
-[
-  {"role": "user", "content": "消息内容", "timestamp": "..."},
-  {"role": "assistant", "content": "回复内容", "timestamp": "..."}
-]
-```
+### GET /api/chat/history/{session_id}
+获取会话历史。
 
 ---
 
-## 2. 技能接口
+## 2. Function Calling（Tools）
 
-### 技能列表
-```
-GET /api/skills
-```
+### GET /api/chat/tools
+列出已注册 tools（含参数 schema）。
 
-**Response:**
+示例返回：
 ```json
 [
   {
-    "id": "general",
-    "name": "通用助手",
-    "description": "日常对话",
-    "prompt": "你是一个...",
-    "enabled": true
+    "name": "web_search",
+    "description": "Search the web and return structured summaries",
+    "args_schema": {
+      "type": "object",
+      "required": ["query"],
+      "properties": {
+        "query": {"type": "string"},
+        "count": {"type": "integer", "minimum": 1, "maximum": 10}
+      }
+    }
   }
 ]
 ```
 
-### 切换技能
+### POST /api/chat/tools/call
+统一 tool 调用入口。
+
+Request:
+```json
+{
+  "tool_name": "web_search",
+  "args": {
+    "query": "FastAPI tutorial",
+    "count": 3
+  }
+}
 ```
-POST /api/skills/{skill_id}/toggle
+
+Response:
+```json
+{
+  "ok": true,
+  "tool": "web_search",
+  "result": {
+    "query": "FastAPI tutorial",
+    "total": 3,
+    "top_result": {},
+    "results": [],
+    "source": "api"
+  },
+  "error": null
+}
 ```
+
+行为说明：
+- 参数会按 `args_schema` 做最小校验（required/type/min/max）
+- tool 失败后按 `TOOL_MAX_RETRIES` 自动重试
 
 ---
 
-## 3. 知识库接口
+## 3. Templates
 
-### 文档列表
-```
-GET /api/knowledge/list
-```
+### GET /api/templates
+列出模板。
 
-### 上传文档
-```
-POST /api/knowledge/add
-Content-Type: multipart/form-data
+### GET /api/templates/{template_id}
+获取模板详情。
 
-file: [文件]
-```
+---
 
-支持格式：PDF, Word, TXT, Markdown
+## 4. Skills
+
+### GET /api/skills
+技能列表。
+
+### POST /api/skills/{skill_id}/toggle
+启用/禁用技能。
+
+---
+
+## 5. 知识库
+
+### GET /api/knowledge/list
+文档列表。
+
+### POST /api/knowledge/add
+上传文档（multipart/form-data）。

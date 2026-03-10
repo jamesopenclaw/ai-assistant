@@ -13,8 +13,14 @@ TEST_DB = "/tmp/test_chat_history.db"
 
 
 @pytest.fixture(autouse=True)
-def setup_test_db():
+def setup_test_db(monkeypatch):
     """设置测试数据库"""
+    monkeypatch.setenv("CHAT_DB_PATH", TEST_DB)
+    try:
+        import app.services.chat_service as chat_service_module
+        chat_service_module.DB_PATH = TEST_DB
+    except Exception:
+        pass
     # 初始化测试数据库
     conn = sqlite3.connect(TEST_DB)
     conn.execute("""
