@@ -1,350 +1,235 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   ProTable, 
   ProColumns, 
   ActionType, 
   ModalForm, 
   ProFormText, 
-  ProFormSelect, 
-  ProFormTextArea,
-  ProDescriptions 
+  ProDescriptions
 } from '@ant-design/pro-components';
 import { 
   Button, 
   Space, 
   Tag, 
-  Avatar, 
   Typography, 
   message, 
-  Popconfirm,
-  Dropdown 
+  Card,
+  Upload
 } from 'antd';
 import { 
   PlusOutlined, 
-  FileTextOutlined, 
-  FolderOutlined, 
-  EditOutlined,
+  FileTextOutlined,
   DeleteOutlined,
-  MoreOutlined,
-  DownloadOutlined,
-  ShareAltOutlined,
-  EyeOutlined
+  InboxOutlined
 } from '@ant-design/icons';
-import type { KnowledgeItem } from './data.d';
+import type { UploadProps } from 'antd';
 import styles from './index.less';
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
+const { Dragger } = Upload;
 
-const categoryMap = {
-  document: { text: '文档', color: 'blue' },
-  code: { text: '代码', color: 'green' },
-  api: { text: 'API', color: 'purple' },
-  other: { text: '其他', color: 'default' },
+// 文档类型映射
+const fileTypeMap: Record<string, { text: string; color: string }> = {
+  pdf: { text: 'PDF', color: 'red' },
+  doc: { text: 'Word', color: 'blue' },
+  docx: { text: 'Word', color: 'blue' },
+  txt: { text: '文本', color: 'default' },
+  md: { text: 'Markdown', color: 'orange' },
 };
 
-// 模拟数据
-const mockData: KnowledgeItem[] = [
-  {
-    id: '1',
-    title: 'React Hooks 最佳实践',
-    category: 'document',
-    tags: ['React', 'Hooks', '前端'],
-    content: '详细介绍了 React Hooks 的使用规范和最佳实践...',
-    author: 'Linus',
-    createdAt: '2026-03-01 10:00:00',
-    updatedAt: '2026-03-09 15:30:00',
-    views: 1250,
-    status: 'published',
-  },
-  {
-    id: '2',
-    title: 'Python 爬虫实现指南',
-    category: 'code',
-    tags: ['Python', '爬虫', '数据采集'],
-    content: '使用 requests 和 BeautifulSoup 实现网页爬取...',
-    author: 'Bob',
-    createdAt: '2026-02-28 14:00:00',
-    updatedAt: '2026-03-08 09:00:00',
-    views: 890,
-    status: 'published',
-  },
-  {
-    id: '3',
-    title: 'RESTful API 设计规范',
-    category: 'api',
-    tags: ['API', 'REST', '后端'],
-    content: '详细说明了 RESTful API 的设计原则和最佳实践...',
-    author: 'Alice',
-    createdAt: '2026-02-25 11:00:00',
-    updatedAt: '2026-03-07 16:00:00',
-    views: 2100,
-    status: 'published',
-  },
-  {
-    id: '4',
-    title: '数据库优化技巧',
-    category: 'document',
-    tags: ['数据库', 'MySQL', '优化'],
-    content: '分享数据库性能优化的经验和方法...',
-    author: 'Linus',
-    createdAt: '2026-03-05 09:00:00',
-    updatedAt: '2026-03-09 10:00:00',
-    views: 560,
-    status: 'draft',
-  },
-];
+// 获取租户 ID
+const getTenantId = () => localStorage.getItem('currentTenantId') || '1';
+
+interface KnowledgeDoc {
+  id: string;
+  filename: string;
+  file_type: string;
+  uploaded_at: string;
+  chunk_count: number;
+}
 
 export default function KnowledgePage() {
   const actionRef = useRef<ActionType>();
+  const [docs, setDocs] = useState<KnowledgeDoc[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  const handleEdit = (record: KnowledgeItem) => {
-    message.info(`编辑知识: ${record.title}`);
+  // 加载文档列表
+  const loadDocs = async () => {
+    setLoading(true);
+    try {
+      const tenantId = getTenantId();
+      const res = await fetch('/api/knowledge/list', {
+        headers: { 'X-Tenant-ID': tenantId }
+      });
+      const data = await res.json();
+      setDocs(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('加载文档失败:', err);
+      message.error('加载文档列表失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (record: KnowledgeItem) => {
-    message.success(`删除知识: ${record.title}`);
-    actionRef.current?.reload();
+  useEffect(() => {
+    loadDocs();
+  }, []);
+
+  // 上传文档
+  const handleUpload: UploadProps['customRequest'] = async (options) => {
+    const { file, onSuccess, onError } = options;
+    setUploading(true);
+    
+    try {
+      const tenantId = getTenantId();
+      const formData = new FormData();
+      formData.append('file', file as File);
+      
+      const res = await fetch('/api/knowledge/add', {
+        method: 'POST',
+        headers: { 'X-Tenant-ID': tenantId },
+        body: formData
+      });
+      
+      if (!res.ok) throw new Error('上传失败');
+      
+      const result = await res.json();
+      message.success(`${file.name} 上传成功`);
+      loadDocs();
+      onSuccess?.(result);
+    } catch (err) {
+      message.error(`${file.name} 上传失败`);
+      onError?.(err as Error);
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const handleView = (record: KnowledgeItem) => {
-    message.info(`查看知识: ${record.title}`);
+  // 删除文档
+  const handleDelete = async (docId: string) => {
+    try {
+      const tenantId = getTenantId();
+      const res = await fetch(`/api/knowledge/${docId}`, {
+        method: 'DELETE',
+        headers: { 'X-Tenant-ID': tenantId }
+      });
+      
+      if (!res.ok) throw new Error('删除失败');
+      
+      message.success('删除成功');
+      loadDocs();
+    } catch (err) {
+      message.error('删除失败');
+    }
   };
 
-  const handleShare = (record: KnowledgeItem) => {
-    message.success(`分享链接已复制: ${record.title}`);
-  };
-
-  const handleDownload = (record: KnowledgeItem) => {
-    message.success(`下载知识: ${record.title}`);
-  };
-
-  const expandedRowRender = (record: KnowledgeItem) => (
-    <div className={styles.expandedContent}>
-      <ProDescriptions column={2} size="small">
-        <ProDescriptions.Item label="内容摘要">
-          {record.content.substring(0, 100)}...
-        </ProDescriptions.Item>
-        <ProDescriptions.Item label="标签">
-          <Space wrap>
-            {record.tags.map((tag) => (
-              <Tag key={tag} color="blue">{tag}</Tag>
-            ))}
-          </Space>
-        </ProDescriptions.Item>
-      </ProDescriptions>
-    </div>
-  );
-
-  const columns: ProColumns<KnowledgeItem>[] = [
+  // 表格列定义
+  const columns: ProColumns<KnowledgeDoc>[] = [
     {
-      title: '标题',
-      dataIndex: 'title',
-      key: 'title',
+      title: '文件名',
+      dataIndex: 'filename',
+      key: 'filename',
       render: (_, record) => (
         <Space>
-          <Avatar 
-            size="small" 
-            icon={record.category === 'folder' ? <FolderOutlined /> : <FileTextOutlined />}
-            style={{ 
-              backgroundColor: categoryMap[record.category as keyof typeof categoryMap]?.color === 'blue' ? '#1890ff' :
-                             categoryMap[record.category as keyof typeof categoryMap]?.color === 'green' ? '#52c41a' :
-                             categoryMap[record.category as keyof typeof categoryMap]?.color === 'purple' ? '#722ed1' : '#d9d9d9'
-            }}
-          />
-          <Text strong>{record.title}</Text>
+          <FileTextOutlined style={{ color: '#FF6B35' }} />
+          <Text strong>{record.filename}</Text>
         </Space>
       ),
     },
     {
-      title: '分类',
-      dataIndex: 'category',
-      key: 'category',
-      valueType: 'select',
-      valueEnum: {
-        document: { text: '文档', status: 'Default' },
-        code: { text: '代码', status: 'Success' },
-        api: { text: 'API', status: 'Processing' },
-        other: { text: '其他', status: 'Default' },
-      },
+      title: '类型',
+      dataIndex: 'file_type',
+      key: 'file_type',
+      width: 100,
       render: (_, record) => {
-        const category = categoryMap[record.category as keyof typeof categoryMap];
-        return <Tag color={category?.color}>{category?.text}</Tag>;
+        const info = fileTypeMap[record.file_type.toLowerCase()] || { text: record.file_type, color: 'default' };
+        return <Tag color={info.color}>{info.text}</Tag>;
       },
     },
     {
-      title: '标签',
-      dataIndex: 'tags',
-      key: 'tags',
-      render: (tags) => (
-        <Space wrap size="small">
-          {tags?.map((tag: string) => (
-            <Tag key={tag}>{tag}</Tag>
-          ))}
-        </Space>
-      ),
-      search: false,
+      title: 'Chunk 数量',
+      dataIndex: 'chunk_count',
+      key: 'chunk_count',
+      width: 120,
+      render: (count) => <Tag color="blue">{count} 个片段</Tag>,
     },
     {
-      title: '作者',
-      dataIndex: 'author',
-      key: 'author',
-      render: (author) => (
-        <Space>
-          <Avatar size="small" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${author}`} />
-          {author}
-        </Space>
-      ),
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      valueType: 'select',
-      valueEnum: {
-        published: { text: '已发布', status: 'Success' },
-        draft: { text: '草稿', status: 'Warning' },
-      },
-    },
-    {
-      title: '浏览量',
-      dataIndex: 'views',
-      key: 'views',
-      sorter: (a, b) => a.views - b.views,
-      search: false,
-    },
-    {
-      title: '更新时间',
-      dataIndex: 'updatedAt',
-      key: 'updatedAt',
-      valueType: 'dateTime',
-      sorter: (a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime(),
-      search: false,
+      title: '上传时间',
+      dataIndex: 'uploaded_at',
+      key: 'uploaded_at',
+      width: 180,
+      render: (val) => val ? new Date(val).toLocaleString() : '-',
     },
     {
       title: '操作',
       key: 'action',
-      valueType: 'option',
+      width: 100,
       render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => handleView(record)}
-          >
-            查看
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: 'share',
-                  label: '分享',
-                  icon: <ShareAltOutlined />,
-                  onClick: () => handleShare(record),
-                },
-                {
-                  key: 'download',
-                  label: '下载',
-                  icon: <DownloadOutlined />,
-                  onClick: () => handleDownload(record),
-                },
-                {
-                  type: 'divider',
-                },
-                {
-                  key: 'delete',
-                  label: '删除',
-                  icon: <DeleteOutlined />,
-                  danger: true,
-                  onClick: () => handleDelete(record),
-                },
-              ],
-            }}
-          >
-            <Button type="link" size="small" icon={<MoreOutlined />} />
-          </Dropdown>
-        </Space>
+        <Button
+          type="link"
+          danger
+          size="small"
+          icon={<DeleteOutlined />}
+          onClick={() => handleDelete(record.id)}
+        >
+          删除
+        </Button>
       ),
     },
   ];
 
   return (
     <div className={styles.knowledgeContainer}>
-      <ProTable<KnowledgeItem>
-        actionRef={actionRef}
-        columns={columns}
-        dataSource={mockData}
-        rowKey="id"
-        search={{
-          labelWidth: 'auto',
-        }}
-        expandable={{
-          expandedRowRender,
-          rowExpandable: (record) => true,
-        }}
-        toolBarRender={() => [
-          <ModalForm
-            key="create"
-            title="创建知识条目"
-            trigger={
-              <Button type="primary" icon={<PlusOutlined />}>
-                新建知识
+      <Spin spinning={loading}>
+        <Card 
+          title="知识库文档" 
+          extra={
+            <span style={{ color: '#666', fontSize: 12 }}>
+              共 {docs.length} 个文档 | 当前租户: {getTenantId()}
+            </span>
+          }
+        >
+          {/* 上传区域 */}
+          <div style={{ marginBottom: 16 }}>
+            <Dragger
+              name="file"
+              multiple={false}
+              customRequest={handleUpload}
+              showUploadList={false}
+              accept=".pdf,.doc,.docx,.txt,.md"
+              disabled={uploading}
+            >
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined style={{ color: '#FF6B35', fontSize: 48 }} />
+              </p>
+              <p className="ant-upload-text">点击或拖拽文件到此处上传</p>
+              <p className="ant-upload-hint">
+                支持 PDF、Word、TXT、Markdown 格式
+              </p>
+            </Dragger>
+          </div>
+
+          {/* 文档列表 */}
+          <ProTable<KnowledgeDoc>
+            actionRef={actionRef}
+            columns={columns}
+            dataSource={docs}
+            rowKey="id"
+            search={false}
+            pagination={{ pageSize: 10 }}
+            toolBarRender={() => [
+              <Button 
+                key="refresh" 
+                onClick={loadDocs}
+                loading={loading}
+              >
+                刷新
               </Button>
-            }
-            onFinish={async (values) => {
-              message.success('创建成功');
-              return true;
-            }}
-          >
-            <ProFormText
-              name="title"
-              label="标题"
-              placeholder="请输入知识标题"
-              rules={[{ required: true }]}
-            />
-            <ProFormSelect
-              name="category"
-              label="分类"
-              placeholder="请选择分类"
-              options={[
-                { label: '文档', value: 'document' },
-                { label: '代码', value: 'code' },
-                { label: 'API', value: 'api' },
-                { label: '其他', value: 'other' },
-              ]}
-              rules={[{ required: true }]}
-            />
-            <ProFormText
-              name="tags"
-              label="标签"
-              placeholder="请输入标签，用逗号分隔"
-            />
-            <ProFormTextArea
-              name="content"
-              label="内容"
-              placeholder="请输入知识内容"
-              rules={[{ required: true }]}
-              fieldProps={{
-                rows: 4,
-              }}
-            />
-          </ModalForm>,
-        ]}
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showTotal: (total) => `共 ${total} 条`,
-        }}
-      />
+            ]}
+          />
+        </Card>
+      </Spin>
     </div>
   );
 }

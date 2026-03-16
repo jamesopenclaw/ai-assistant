@@ -140,10 +140,12 @@ export default function ChatPage() {
     setActiveTools(tools);
 
     try {
+      const tenantId = localStorage.getItem('currentTenantId') || '1';
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
         },
         body: JSON.stringify({
           session_id: sessionId,

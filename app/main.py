@@ -2,8 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from app.api import chat, knowledge, skills, auth, templates
+from app.api import chat, knowledge, skills, auth, templates, webhook_wechat, tenants, usage, sessions
 from app.utils.database import engine, Base
+# 导入所有模型以确保 Base.metadata 包含它们
+from app.models import User, Tenant, Usage
 import os
 
 # Create database tables
@@ -31,6 +33,10 @@ app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
 app.include_router(skills.router, prefix="/api/skills", tags=["skills"])
 app.include_router(templates.router, prefix="/api/templates", tags=["templates"])
+app.include_router(webhook_wechat.router, prefix="/api/webhook", tags=["webhook"])
+app.include_router(tenants.router, tags=["tenants"])
+app.include_router(usage.router, tags=["usage"])
+app.include_router(sessions.router, tags=["sessions"])
 
 
 @app.get("/")

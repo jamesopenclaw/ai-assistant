@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException
-from typing import List
+from fastapi import APIRouter, HTTPException, Header
+from typing import List, Optional
 from app.models.schemas import ChatRequest, ChatResponse, Message, ToolCallRequest, ToolCallResponse
 from app.services.chat_service import ChatService
 from app.services.tools_runtime import function_caller, registry
@@ -9,14 +9,24 @@ router = APIRouter()
 chat_service = ChatService()
 
 
+def get_current_tenant_id(authorization: Optional[str] = Header(None)) -> int:
+    """从 token 中提取 tenant_id，默认返回 1（向后兼容）"""
+    # TODO: 实际实现时从 JWT token 中解析 tenant_id
+    return 1
+
+
 @router.post("", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+async def chat(
+    request: ChatRequest,
+    tenant_id: int = Header(1, alias="X-Tenant-ID")
+):
     """发送消息并获取 AI 回复"""
     try:
         reply = await chat_service.get_reply(
             session_id=request.session_id,
             message=request.message,
-            skill_id=request.skill_id
+            skill_id=request.skill_id,
+            tenant_id=tenant_id
         )
         
         return ChatResponse(

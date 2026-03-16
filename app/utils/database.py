@@ -5,6 +5,9 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 import os
 
+# 注意：不要在这里导入模型，让使用的地方自行导入
+# 这样可以避免循环导入问题
+
 
 class Settings(BaseSettings):
     database_url: str = "sqlite:///./ai_assistant.db"
