@@ -75,6 +75,21 @@ export default function BasicLayout(props: { children: React.ReactNode }) {
       icon: 'HistoryOutlined',
     },
     {
+      path: '/autoreply',
+      name: '关键词回复',
+      icon: 'ApiOutlined',
+    },
+    {
+      path: '/knowledge',
+      name: '知识库',
+      icon: 'BookOutlined',
+    },
+    {
+      path: '/users',
+      name: '用户管理',
+      icon: 'TeamOutlined',
+    },
+    {
       path: '/templates',
       name: '对话模板',
       icon: 'AppstoreOutlined',
@@ -83,11 +98,6 @@ export default function BasicLayout(props: { children: React.ReactNode }) {
       path: '/cicd',
       name: 'CI/CD 流水线',
       icon: 'RocketOutlined',
-    },
-    {
-      path: '/knowledge',
-      name: '知识库',
-      icon: 'BookOutlined',
     },
   ];
 
