@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from app.api import chat, knowledge, skills, auth, templates, webhook_wechat, tenants, usage, sessions, scheduler, users, autoreply, customer_service
+from app.api import chat, knowledge, skills, auth, templates, webhook_wechat, tenants, usage, sessions, scheduler, users, autoreply, customer_service, models
 from app.utils.database import engine, Base
 # 导入所有模型以确保 Base.metadata 包含它们
 from app.models import User, Tenant, Usage
@@ -41,6 +41,7 @@ app.include_router(scheduler.router, tags=["scheduler"])
 app.include_router(users.router, tags=["users"])
 app.include_router(autoreply.router, tags=["autoreply"])
 app.include_router(customer_service.router, tags=["customer-service"])
+app.include_router(models.router, tags=["models"])
 
 
 @app.get("/")
