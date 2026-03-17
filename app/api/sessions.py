@@ -320,7 +320,7 @@ def add_session_message(
 @router.get("/{session_id}/export")
 def export_session(
     session_id: str,
-    format: str = Query("json", regex="^(json|markdown|text)$"),
+    format: str = Query("json", pattern="^(json|markdown|text)$"),
     tenant_id: int = Header(1, alias="X-Tenant-ID")
 ):
     """导出会话记录"""
