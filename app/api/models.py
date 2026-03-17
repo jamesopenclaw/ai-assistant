@@ -98,6 +98,35 @@ def list_providers():
     return PROVIDERS
 
 
+@router.get("/active")
+def get_active_model(tenant_id: int = Header(1, alias="X-Tenant-ID")):
+    """获取当前使用的模型"""
+    models = get_tenant_models(tenant_id)
+    
+    # 优先返回默认模型
+    for m in models.values():
+        if m.get("is_default"):
+            return {
+                "model_id": m.get("model_id"),
+                "name": m["name"],
+                "provider": m["provider"],
+                "model_name": m.get("model_name", "")
+            }
+    
+    # 返回第一个启用的模型
+    for mid, m in models.items():
+        if m.get("enabled"):
+            return {
+                "model_id": mid,
+                "name": m["name"],
+                "provider": m["provider"],
+                "model_name": m.get("model_name", "")
+            }
+    
+    # 无可用模型
+    return {"error": "无可用模型，请先配置"}
+
+
 @router.get("", response_model=List[ModelConfig])
 def list_models(tenant_id: int = Header(1, alias="X-Tenant-ID")):
     """获取模型配置列表"""
@@ -269,30 +298,4 @@ def set_default_model(
     return {"message": "已设为默认模型"}
 
 
-@router.get("/active")
-def get_active_model(tenant_id: int = Header(1, alias="X-Tenant-ID")):
-    """获取当前使用的模型"""
-    models = get_tenant_models(tenant_id)
-    
-    # 优先返回默认模型
-    for m in models.values():
-        if m.get("is_default"):
-            return {
-                "model_id": m.get("model_id"),
-                "name": m["name"],
-                "provider": m["provider"],
-                "model_name": m.get("model_name", "")
-            }
-    
-    # 返回第一个启用的模型
-    for mid, m in models.items():
-        if m.get("enabled"):
-            return {
-                "model_id": mid,
-                "name": m["name"],
-                "provider": m["provider"],
-                "model_name": m.get("model_name", "")
-            }
-    
-    # 无可用模型
-    return {"error": "无可用模型，请先配置"}
+# 删除重复的 get_active_model 函数
