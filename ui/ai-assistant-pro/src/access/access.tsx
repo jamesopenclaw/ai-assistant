@@ -17,6 +17,7 @@ export const accessIconMap: Record<string, React.ReactNode> = {
   HistoryOutlined: <Icons.HistoryOutlined />,
   CustomerServiceOutlined: <Icons.CustomerServiceOutlined />,
   ThunderboltOutlined: <Icons.ThunderboltOutlined />,
+  MonitorOutlined: <Icons.MonitorOutlined />,
 };
 
 // 权限定义

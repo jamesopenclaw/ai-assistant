@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from app.api import chat, knowledge, skills, auth, templates, webhook_wechat, tenants, usage, sessions, scheduler, users, autoreply, customer_service, models, websocket
+from app.api import chat, knowledge, skills, auth, templates, webhook_wechat, tenants, usage, sessions, scheduler, users, autoreply, customer_service, models, websocket, monitor
+from app.middleware.monitor import MonitorMiddleware
 from app.utils.database import engine, Base
 # 导入所有模型以确保 Base.metadata 包含它们
 from app.models import User, Tenant, Usage
@@ -21,6 +22,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 监控中间件
+app.add_middleware(MonitorMiddleware)
 
 # Serve static files
 static_dir = os.path.join(os.path.dirname(__file__), "..", "ui", "ai-assistant-pro", "dist")
@@ -43,6 +47,7 @@ app.include_router(autoreply.router, tags=["autoreply"])
 app.include_router(customer_service.router, tags=["customer-service"])
 app.include_router(models.router, tags=["models"])
 app.include_router(websocket.router, tags=["websocket"])
+app.include_router(monitor.router, tags=["monitor"])
 
 
 @app.get("/")
