@@ -90,6 +90,11 @@ export default function BasicLayout(props: { children: React.ReactNode }) {
       icon: 'TeamOutlined',
     },
     {
+      path: '/customerservice',
+      name: '客服管理',
+      icon: 'CustomerServiceOutlined',
+    },
+    {
       path: '/templates',
       name: '对话模板',
       icon: 'AppstoreOutlined',

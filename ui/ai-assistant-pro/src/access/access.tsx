@@ -15,6 +15,7 @@ export const accessIconMap: Record<string, React.ReactNode> = {
   TeamOutlined: <Icons.TeamOutlined />,
   ApiOutlined: <Icons.ApiOutlined />,
   HistoryOutlined: <Icons.HistoryOutlined />,
+  CustomerServiceOutlined: <Icons.CustomerServiceOutlined />,
 };
 
 // 权限定义
