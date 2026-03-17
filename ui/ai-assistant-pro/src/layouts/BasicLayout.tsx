@@ -70,6 +70,11 @@ export default function BasicLayout(props: { children: React.ReactNode }) {
       icon: 'MessageOutlined',
     },
     {
+      path: '/chat/realtime',
+      name: '实时对话',
+      icon: 'ThunderboltOutlined',
+    },
+    {
       path: '/sessions',
       name: '会话管理',
       icon: 'HistoryOutlined',
