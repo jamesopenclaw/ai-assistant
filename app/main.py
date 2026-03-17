@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from app.api import chat, knowledge, skills, auth, templates, webhook_wechat, tenants, usage, sessions, scheduler, users, autoreply, customer_service, models, websocket, monitor
+from app.api import chat, chat_stream, knowledge, skills, auth, templates, webhook_wechat, tenants, usage, sessions, scheduler, users, autoreply, customer_service, models, websocket, monitor
 from app.middleware.monitor import MonitorMiddleware
 from app.utils.database import engine, Base
 # 导入所有模型以确保 Base.metadata 包含它们
@@ -34,6 +34,7 @@ if os.path.exists(static_dir):
 # Routes
 app.include_router(auth.router)
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+app.include_router(chat_stream.router, prefix="/api/chat", tags=["chat-stream"])
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
 app.include_router(skills.router, prefix="/api/skills", tags=["skills"])
 app.include_router(templates.router, prefix="/api/templates", tags=["templates"])

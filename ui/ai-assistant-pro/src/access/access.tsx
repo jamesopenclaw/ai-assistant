@@ -17,6 +17,7 @@ export const accessIconMap: Record<string, React.ReactNode> = {
   HistoryOutlined: <Icons.HistoryOutlined />,
   CustomerServiceOutlined: <Icons.CustomerServiceOutlined />,
   ThunderboltOutlined: <Icons.ThunderboltOutlined />,
+  AimOutlined: <Icons.AimOutlined />,
   MonitorOutlined: <Icons.MonitorOutlined />,
 };
 
